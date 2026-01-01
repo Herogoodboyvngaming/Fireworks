@@ -16,10 +16,10 @@
             text-shadow: 0 0 10px rgba(255,255,255,0.8);
         }
         #title { font-size: 32px; margin-bottom: 20px; }
-        #instructions { font-size: 20px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px; pointer-events: all; }
+        #instructions { font-size: 20px; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; pointer-events: all; cursor: pointer; }
         @media (max-width: 768px) {
-            #title { font-size: 24px; }
-            #instructions { font-size: 18px; }
+            #title { font-size: 26px; }
+            #instructions { font-size: 18px; padding: 15px; }
         }
     </style>
 </head>
@@ -27,14 +27,13 @@
     <canvas id="canvas"></canvas>
     <div id="overlay">
         <div id="title">Chúc Mừng Năm Mới 2026! 🎆</div>
-        <div id="instructions">Tap/Click màn hình để bắn pháo<br>và bật âm thanh!</div>
+        <div id="instructions">TAP/CLICK mạnh vào đây<br>để bật âm thanh + pháo hoa!</div>
     </div>
 
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const overlay = document.getElementById('overlay');
-        const instructions = document.getElementById('instructions');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -44,23 +43,36 @@
             canvas.height = window.innerHeight;
         });
 
-        // Detect mobile để tối ưu performance
-        const isMobile = /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent) || window.innerWidth < 768;
-        const particleCountBase = isMobile ? 80 : 150;  // Ít particle hơn trên mobile
-        const autoInterval = isMobile ? 1200 : 800;    // Bắn chậm hơn trên mobile
-        const trailMaxLength = isMobile ? 12 : 20;
-        const shadowBlurAmount = isMobile ? 8 : 12;
+        // Detect mobile mạnh hơn + giảm hiệu ứng nặng
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/.test(navigator.userAgent) || window.innerWidth <= 768;
+        const particleCountBase = isMobile ? 50 : 120;      // Giảm mạnh particle trên mobile
+        const flashCount = isMobile ? 8 : 20;               // Giảm flash trắng
+        const autoInterval = isMobile ? 2000 : 1000;        // Bắn chậm hơn trên mobile (ít pháo hơn)
+        const trailMaxLength = isMobile ? 8 : 15;           // Trail ngắn hơn
+        const useShadow = !isMobile;                        // TẮT HOÀN TOÀN shadow trên mobile → mượt nhất
+        const shadowAmount = 10;
 
         let particles = [];
         let fireworks = [];
-        let hasInteracted = false;  // Flag unlock âm thanh
+        let hasInteracted = false;
 
-        const launchSoundUrl = 'https://assets.mixkit.co/sfx/preview/mixkit-firework-whistle-launch-1674.mp3';
-        const explosionSoundUrl = 'https://assets.mixkit.co/sfx/preview/mixkit-large-firework-explosion-1670.mp3';
+        // Preload âm thanh để chắc chắn hơn (clone khi play để phát nhiều lần)
+        const launchAudio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-firework-whistle-launch-1674.mp3');
+        const explosionAudio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-large-firework-explosion-1670.mp3');
 
-        function playSound(url) {
+        function playLaunch() {
             if (hasInteracted) {
-                new Audio(url).play().catch(() => {});
+                const a = launchAudio.cloneNode();
+                a.volume = 0.6;
+                a.play().catch(() => {});
+            }
+        }
+
+        function playExplosion() {
+            if (hasInteracted) {
+                const a = explosionAudio.cloneNode();
+                a.volume = 0.8;
+                a.play().catch(() => {});
             }
         }
 
@@ -70,20 +82,22 @@
                 this.color = color; this.size = size; this.life = life; this.maxLife = life;
             }
             update() {
-                this.vx *= 0.98; this.vy *= 0.98; this.vy += 0.12;
+                this.vx *= 0.97; this.vy *= 0.97; this.vy += 0.1;
                 this.x += this.vx; this.y += this.vy; this.life--;
             }
             draw() {
                 const opacity = this.life / this.maxLife;
-                ctx.save();
                 ctx.globalAlpha = opacity;
                 ctx.fillStyle = this.color;
-                ctx.shadowBlur = shadowBlurAmount;
-                ctx.shadowColor = this.color;
+                if (useShadow) {
+                    ctx.shadowBlur = shadowAmount;
+                    ctx.shadowColor = this.color;
+                }
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.restore();
+                if (useShadow) ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
             }
         }
 
@@ -91,27 +105,27 @@
             constructor(targetX = null, targetY = null) {
                 this.x = targetX || Math.random() * canvas.width;
                 this.y = canvas.height;
-                this.targetY = targetY || Math.random() * (canvas.height / 3) + 50;
-                this.vx = targetX ? (targetX - this.x) / 60 : (Math.random() - 0.5) * 4;
-                this.vy = -16 - Math.random() * 4;
+                this.targetY = targetY || Math.random() * (canvas.height / 3) + 100;
+                this.vx = targetX ? (targetX - this.x) / 70 : (Math.random() - 0.5) * 2;
+                this.vy = -14 - Math.random() * 3;
                 this.hue = Math.random() * 360;
                 this.trail = [];
 
-                playSound(launchSoundUrl);  // Chỉ phát nếu đã interact
+                playLaunch();
             }
 
             update() {
                 this.trail.push({x: this.x, y: this.y});
                 if (this.trail.length > trailMaxLength) this.trail.shift();
 
-                // Trail particle nhỏ
-                if (Math.random() > 0.3) {
-                    particles.push(new Particle(this.x, this.y, Math.random()*2-1, Math.random()*2, `hsl(${this.hue},100%,60%)`, 1.5, 20));
+                // Trail particle rất ít trên mobile
+                if (!isMobile || Math.random() > 0.5) {
+                    particles.push(new Particle(this.x, this.y, Math.random()*1.5-0.75, Math.random()*1.5, `hsl(${this.hue},100%,60%)`, 1, 15));
                 }
 
                 this.x += this.vx;
                 this.y += this.vy;
-                this.vy += 0.15;
+                this.vy += 0.12;
 
                 if (this.y <= this.targetY || this.vy >= 0) {
                     this.explode();
@@ -121,46 +135,50 @@
             }
 
             draw() {
-                // Trail
+                // Trail đơn giản
                 this.trail.forEach((p, i) => {
-                    ctx.globalAlpha = i / this.trail.length * 0.8;
+                    ctx.globalAlpha = i / this.trail.length * 0.7;
                     ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
-                    ctx.fillRect(p.x - 1.5, p.y - 3, 3, 6);
+                    ctx.fillRect(p.x - 1, p.y - 2, 2, 5);
                 });
 
-                // Rocket head
+                // Rocket head nhẹ
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = 'white';
-                ctx.shadowBlur = shadowBlurAmount * 1.5;
-                ctx.shadowColor = 'white';
-                ctx.fillRect(this.x - 1.5, this.y - 8, 3, 10);
+                if (useShadow) {
+                    ctx.shadowBlur = shadowAmount * 1.2;
+                    ctx.shadowColor = 'white';
+                }
+                ctx.fillRect(this.x - 1, this.y - 6, 2, 8);
+                if (useShadow) ctx.shadowBlur = 0;
             }
 
             explode() {
-                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 40 : 70));
+                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 30 : 50));
                 for (let i = 0; i < count; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * (isMobile ? 8 : 10) + 2;
+                    const speed = Math.random() * (isMobile ? 7 : 9) + 2;
                     const vx = Math.cos(angle) * speed;
                     const vy = Math.sin(angle) * speed;
-                    const hueVar = this.hue + Math.random() * 60 - 30;
+                    const hueVar = this.hue + Math.random() * 50 - 25;
                     const color = `hsl(${hueVar}, 100%, 50%)`;
-                    const size = Math.random() * 2.5 + 1;
-                    const life = Math.random() * 50 + 70;
+                    const size = Math.random() * 2 + 0.8;
+                    const life = Math.random() * 40 + 60;
                     particles.push(new Particle(this.x, this.y, vx, vy, color, size, life));
                 }
 
-                // Flash trắng
-                for (let i = 0; i < (isMobile ? 15 : 25); i++) {
-                    particles.push(new Particle(this.x, this.y, Math.random()*8-4, Math.random()*8-4, 'white', 5, 30));
+                // Flash trắng giảm mạnh
+                for (let i = 0; i < flashCount; i++) {
+                    particles.push(new Particle(this.x, this.y, Math.random()*6-3, Math.random()*6-3, 'white', 4, 25));
                 }
 
-                playSound(explosionSoundUrl);
+                playExplosion();
             }
         }
 
         function animate() {
-            ctx.fillStyle = 'rgba(0,0,0,0.12)';
+            // Fade background nhẹ hơn → đẹp + đỡ nặng
+            ctx.fillStyle = 'rgba(0,0,0,0.08)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             particles = particles.filter(p => {
@@ -180,24 +198,38 @@
 
         animate();
 
-        // Auto bắn pháo (visual luôn có, âm thanh chỉ sau interact)
+        // Auto bắn ít hơn
         setInterval(() => {
-            fireworks.push(new Firework());
+            if (hasInteracted) {  // Chỉ auto bắn visual + sound sau interact
+                fireworks.push(new Firework());
+            } else {
+                // Trước interact chỉ bắn visual nhẹ (không sound)
+                fireworks.push(new Firework());
+            }
         }, autoInterval);
 
-        // Click/Touch để unlock + bắn thủ công
+        // Interaction: Click/Touch – unlock sound chắc chắn
         function handleInteraction(e) {
+            e.preventDefault();
             if (!hasInteracted) {
                 hasInteracted = true;
-                overlay.style.display = 'none';  // Ẩn hết overlay
+                overlay.style.display = 'none';
+
+                // Force unlock bằng cách play 1 sound ngay lập tức
+                playLaunch();
+                playExplosion();  // Play cả 2 để chắc browser unlock context
             }
-            const x = e.clientX || e.touches[0].clientX;
-            const y = e.clientY || e.touches[0].clientY;
-            fireworks.push(new Firework(x, y / 2));
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+            if (x && y) {
+                fireworks.push(new Firework(x, y / 2));
+            }
         }
 
         canvas.addEventListener('click', handleInteraction);
-        canvas.addEventListener('touchstart', handleInteraction);
+        canvas.addEventListener('touchstart', handleInteraction, { passive: false });
+        overlay.addEventListener('click', handleInteraction);
+        overlay.addEventListener('touchstart', handleInteraction, { passive: false });
     </script>
 </body>
 </html>

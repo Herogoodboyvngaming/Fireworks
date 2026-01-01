@@ -3,32 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pháo Hoa Đẹp - Chúc Mừng Năm Mới 2026</title>
+    <title>Pháo Hoa Siêu Đẹp Với Âm Thanh Thật - Chúc Mừng Năm Mới 2026</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
-        canvas { display: block; }
+        #player {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            opacity: 0; /* Ẩn hoàn toàn video, chỉ giữ âm thanh */
+            pointer-events: none;
+            z-index: 1;
+        }
+        canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2;
+            display: block;
+        }
         #overlay {
-            position: absolute;
+            position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             color: white; font-family: Arial, sans-serif; text-align: center;
-            pointer-events: none; z-index: 10;
-            text-shadow: 0 0 10px rgba(255,255,255,0.8);
+            pointer-events: all; z-index: 10; background: rgba(0,0,0,0.7);
+            cursor: pointer;
         }
-        #title { font-size: 32px; margin-bottom: 20px; }
-        #instructions { font-size: 20px; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; pointer-events: all; cursor: pointer; }
+        #title { font-size: 36px; margin-bottom: 30px; text-shadow: 0 0 15px rgba(255,255,255,0.9); }
+        #instructions { font-size: 24px; background: rgba(0,0,0,0.8); padding: 25px 40px; border-radius: 20px; max-width: 90%; }
+        #note { font-size: 18px; margin-top: 40px; color: #ffeb3b; max-width: 85%; }
         @media (max-width: 768px) {
-            #title { font-size: 26px; }
-            #instructions { font-size: 18px; padding: 15px; }
+            #title { font-size: 28px; }
+            #instructions { font-size: 20px; padding: 20px 30px; }
+            #note { font-size: 16px; }
         }
     </style>
 </head>
 <body>
+    <div id="player"></div>
     <canvas id="canvas"></canvas>
     <div id="overlay">
         <div id="title">Chúc Mừng Năm Mới 2026! 🎆</div>
-        <div id="instructions">TAP/CLICK mạnh vào đây<br>để bật âm thanh + pháo hoa!</div>
+        <div id="instructions">TAP/CLICK MẠNH VÀO ĐÂY (hoặc bất kỳ chỗ nào)<br>để bật ÂM THANH PHÁO HOA SIÊU CHÂN THỰC!</div>
+        <div id="note">Âm thanh lấy CHÍNH XÁC từ video bạn gửi (https://youtu.be/LCpaM0Ef39s) → nghe y chang, nổ liên tục xa gần cực đã!<br>Không có hình video, chỉ âm thanh thôi. Nếu không nghe: Tăng volume max, tắt im lặng, reload trang và tap lại!</div>
     </div>
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
 
     <script>
         const canvas = document.getElementById('canvas');
@@ -43,51 +64,44 @@
             canvas.height = window.innerHeight;
         });
 
-        // Detect mobile để giữ performance mượt
         const isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/.test(navigator.userAgent) || window.innerWidth <= 768;
-        const particleCountBase = isMobile ? 50 : 120;
-        const flashCount = isMobile ? 8 : 20;
-        const autoInterval = isMobile ? 2000 : 1000;
-        const trailMaxLength = isMobile ? 8 : 15;
+        const particleCountBase = isMobile ? 60 : 140; // Tăng nhẹ để khớp âm thanh intense hơn
+        const flashCount = isMobile ? 10 : 25;
+        const autoInterval = isMobile ? 1500 : 800; // Nhiều pháo hơn để khớp nổ liên tục
+        const trailMaxLength = isMobile ? 10 : 18;
         const useShadow = !isMobile;
-        const shadowAmount = 10;
+        const shadowAmount = 12;
 
         let particles = [];
         let fireworks = [];
         let hasInteracted = false;
+        let player; // YouTube player - chỉ dùng cho âm thanh
 
-        // Nhiều âm thanh khác nhau để đa dạng, giống pháo hoa thật hơn (từ Mixkit - royalty free)
-        const launchUrls = [
-            'https://assets.mixkit.co/sfx/preview/mixkit-bottle-rocket-whistle-1672.mp3',      // Tiếng huýt chai
-            'https://assets.mixkit.co/sfx/preview/mixkit-rocket-whistle-launch-1673.mp3',       // Tiếng rocket mạnh
-            'https://assets.mixkit.co/sfx/preview/mixkit-firework-whistle-launch-1674.mp3'      // Tiếng huýt cổ điển
-            // Thêm nếu muốn: 'https://assets.mixkit.co/sfx/preview/mixkit-firework-launch-1671.mp3'
-        ];
-
-        const explosionUrls = [
-            'https://assets.mixkit.co/sfx/preview/mixkit-firework-explosion-1669.mp3',          // Nổ bình thường
-            'https://assets.mixkit.co/sfx/preview/mixkit-large-firework-explosion-1670.mp3',   // Nổ TO nhất
-            'https://assets.mixkit.co/sfx/preview/mixkit-single-firework-explosion-1675.mp3'    // Nổ đơn lẻ
-        ];
-
-        // Preload tất cả để mượt
-        const launchAudios = launchUrls.map(url => new Audio(url));
-        const explosionAudios = explosionUrls.map(url => new Audio(url));
-
-        function playLaunch() {
-            if (hasInteracted) {
-                const a = launchAudios[Math.floor(Math.random() * launchAudios.length)].cloneNode();
-                a.volume = 0.7;
-                a.play().catch(() => {});
-            }
+        // YouTube Player API - âm thanh chính xác từ video bạn gửi
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                videoId: 'LCpaM0Ef39s', // Chính video bạn gửi
+                playerVars: {
+                    autoplay: 0,
+                    loop: 1,
+                    playlist: 'LCpaM0Ef39s', // Loop mượt
+                    controls: 0,
+                    modestbranding: 1,
+                    rel: 0,
+                    fs: 0,
+                    playsinline: 1, // Quan trọng cho mobile/iOS
+                    iv_load_policy: 3,
+                    start: 0 // Bắt đầu từ đầu
+                },
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
         }
 
-        function playExplosion() {
-            if (hasInteracted) {
-                const a = explosionAudios[Math.floor(Math.random() * explosionAudios.length)].cloneNode();
-                a.volume = 0.9;  // To hơn xíu cho đã
-                a.play().catch(() => {});
-            }
+        function onPlayerReady(event) {
+            player.setVolume(100);
+            player.unMute();
         }
 
         class Particle {
@@ -121,19 +135,17 @@
                 this.y = canvas.height;
                 this.targetY = targetY || Math.random() * (canvas.height / 3) + 100;
                 this.vx = targetX ? (targetX - this.x) / 70 : (Math.random() - 0.5) * 2;
-                this.vy = -14 - Math.random() * 3;
+                this.vy = -14 - Math.random() * 4; // Nhanh hơn xíu
                 this.hue = Math.random() * 360;
                 this.trail = [];
-
-                playLaunch();
             }
 
             update() {
                 this.trail.push({x: this.x, y: this.y});
                 if (this.trail.length > trailMaxLength) this.trail.shift();
 
-                if (!isMobile || Math.random() > 0.5) {
-                    particles.push(new Particle(this.x, this.y, Math.random()*1.5-0.75, Math.random()*1.5, `hsl(${this.hue},100%,60%)`, 1, 15));
+                if (!isMobile || Math.random() > 0.4) {
+                    particles.push(new Particle(this.x, this.y, Math.random()*1.8-0.9, Math.random()*1.8, `hsl(${this.hue},100%,60%)`, 1.2, 18));
                 }
 
                 this.x += this.vx;
@@ -149,45 +161,43 @@
 
             draw() {
                 this.trail.forEach((p, i) => {
-                    ctx.globalAlpha = i / this.trail.length * 0.7;
+                    ctx.globalAlpha = i / this.trail.length * 0.8;
                     ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
-                    ctx.fillRect(p.x - 1, p.y - 2, 2, 5);
+                    ctx.fillRect(p.x - 1.2, p.y - 3, 2.4, 6);
                 });
 
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = 'white';
                 if (useShadow) {
-                    ctx.shadowBlur = shadowAmount * 1.2;
+                    ctx.shadowBlur = shadowAmount * 1.3;
                     ctx.shadowColor = 'white';
                 }
-                ctx.fillRect(this.x - 1, this.y - 6, 2, 8);
+                ctx.fillRect(this.x - 1.2, this.y - 7, 2.4, 10);
                 if (useShadow) ctx.shadowBlur = 0;
             }
 
             explode() {
-                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 30 : 50));
+                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 40 : 60));
                 for (let i = 0; i < count; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * (isMobile ? 7 : 9) + 2;
+                    const speed = Math.random() * (isMobile ? 8 : 10) + 3;
                     const vx = Math.cos(angle) * speed;
                     const vy = Math.sin(angle) * speed;
                     const hueVar = this.hue + Math.random() * 50 - 25;
                     const color = `hsl(${hueVar}, 100%, 50%)`;
-                    const size = Math.random() * 2 + 0.8;
-                    const life = Math.random() * 40 + 60;
+                    const size = Math.random() * 2.2 + 0.9;
+                    const life = Math.random() * 50 + 70;
                     particles.push(new Particle(this.x, this.y, vx, vy, color, size, life));
                 }
 
                 for (let i = 0; i < flashCount; i++) {
-                    particles.push(new Particle(this.x, this.y, Math.random()*6-3, Math.random()*6-3, 'white', 4, 25));
+                    particles.push(new Particle(this.x, this.y, Math.random()*7-3.5, Math.random()*7-3.5, 'white', 4.5, 30));
                 }
-
-                playExplosion();
             }
         }
 
         function animate() {
-            ctx.fillStyle = 'rgba(0,0,0,0.08)';
+            ctx.fillStyle = 'rgba(0,0,0,0.09)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             particles = particles.filter(p => {
@@ -207,19 +217,22 @@
 
         animate();
 
+        // Auto bắn pháo nhiều hơn để khớp với âm thanh nổ liên tục
         setInterval(() => {
             fireworks.push(new Firework());
         }, autoInterval);
 
+        // Tap/Click để bật âm thanh từ video thật
         function handleInteraction(e) {
             e.preventDefault();
             if (!hasInteracted) {
                 hasInteracted = true;
                 overlay.style.display = 'none';
-
-                // Force play vài sound để unlock chắc chắn
-                playLaunch();
-                playExplosion();
+                if (player && player.playVideo) {
+                    player.playVideo();
+                    player.unMute();
+                    player.setVolume(100);
+                }
             }
             const x = e.clientX || (e.touches && e.touches[0].clientX);
             const y = e.clientY || (e.touches && e.touches[0].clientY);

@@ -1,100 +1,170 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Fireworks 🎆</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: black;
-      overflow: hidden;
-    }
-    canvas {
-      display: block;
-    }
-    .text {
-      position: fixed;
-      top: 40%;
-      width: 100%;
-      text-align: center;
-      font-size: 48px;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-shadow: 0 0 15px #ff0;
-      z-index: 10;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🎆 Happy New Year 🎆</title>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+canvas {
+  display: block;
+}
+
+#title {
+  position: fixed;
+  top: 40%;
+  width: 100%;
+  text-align: center;
+  font-size: clamp(28px, 6vw, 52px);
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  transition: color 0.3s, text-shadow 0.3s;
+  z-index: 10;
+  user-select: none;
+}
+</style>
 </head>
 <body>
 
-<div class="text">🎆 HAPPY NEW YEAR 🎆</div>
+<div id="title">🎆 HAPPY NEW YEAR 🎆</div>
 <canvas id="canvas"></canvas>
+
+<!-- 🔊 SOUND -->
+<audio id="launchSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_9b8b8b4c94.mp3" preload="auto"></audio>
+<audio id="boomSound" src="https://cdn.pixabay.com/audio/2022/03/10/audio_8c9c7d6d4d.mp3" preload="auto"></audio>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const title = document.getElementById("title");
 
-window.onresize = () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-};
+function resize() {
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
 
+const launchSound = document.getElementById("launchSound");
+const boomSound = document.getElementById("boomSound");
+
+const COLORS = [
+  "#ff4040", "#ffd700", "#00e5ff",
+  "#00ff7f", "#ff00ff", "#ff8c00"
+];
+
+// ===== ROCKET =====
+class Rocket {
+  constructor(x = Math.random() * canvas.width) {
+    this.x = x;
+    this.y = canvas.height;
+    this.speed = Math.random() * 3 + 6;
+    this.exploded = false;
+  }
+
+  update() {
+    this.y -= this.speed;
+    if (this.y <= canvas.height * 0.4 && !this.exploded) {
+      this.exploded = true;
+      explode(this.x, this.y);
+      boomSound.cloneNode().play();
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(this.x, this.y, 2, 8);
+  }
+}
+
+// ===== PARTICLE =====
 class Particle {
   constructor(x, y, color) {
     this.x = x;
     this.y = y;
-    this.radius = Math.random() * 2 + 1;
     this.color = color;
-    this.speedX = (Math.random() - 0.5) * 6;
-    this.speedY = (Math.random() - 0.5) * 6;
-    this.life = 100;
+    this.life = 90;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 2;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
   }
 
   update() {
-    this.x += this.speedX;
-    this.y += this.speedY;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.04; // gravity nhẹ
     this.life--;
   }
 
   draw() {
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.globalAlpha = this.life / 90;
     ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
   }
 }
 
+let rockets = [];
 let particles = [];
 
-function createFirework() {
-  const x = Math.random() * canvas.width;
-  const y = Math.random() * canvas.height / 2;
-  const colors = ["red", "yellow", "blue", "lime", "cyan", "magenta", "orange"];
-  const color = colors[Math.floor(Math.random() * colors.length)];
+// ===== EFFECT =====
+function explode(x, y) {
+  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
 
-  for (let i = 0; i < 80; i++) {
+  // đổi màu chữ theo pháo
+  title.style.color = color;
+  title.style.textShadow = `0 0 25px ${color}`;
+
+  const count = innerWidth < 600 ? 40 : 70; // tối ưu mobile
+  for (let i = 0; i < count; i++) {
     particles.push(new Particle(x, y, color));
   }
 }
 
+function launchRocket(x) {
+  rockets.push(new Rocket(x));
+  launchSound.cloneNode().play();
+}
+
+// ===== LOOP =====
 function animate() {
-  ctx.fillStyle = "rgba(0,0,0,0.2)";
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  particles.forEach((p, i) => {
+  rockets = rockets.filter(r => {
+    r.update();
+    r.draw();
+    return !r.exploded;
+  });
+
+  particles = particles.filter(p => {
     p.update();
     p.draw();
-    if (p.life <= 0) particles.splice(i, 1);
+    return p.life > 0;
   });
 
   requestAnimationFrame(animate);
 }
-
-setInterval(createFirework, 700);
 animate();
+
+// ===== AUTO FIRE =====
+setInterval(() => launchRocket(), 900);
+
+// ===== CLICK / TOUCH =====
+addEventListener("pointerdown", e => {
+  launchRocket(e.clientX);
+});
 </script>
 
 </body>

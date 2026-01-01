@@ -1,174 +1,403 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎆 Happy New Year 🎆</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Happy New Year</title>
 
 <style>
-html, body {
-  margin: 0;
-  padding: 0;
-  background: #000;
-  overflow: hidden;
-}
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-canvas {
-  display: block;
-}
+    html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(circle at bottom, #020111, #000);
+        font-family: Arial, sans-serif;
+    }
 
-#title {
-  position: fixed;
-  top: 40%;
-  width: 100%;
-  text-align: center;
-  font-size: clamp(28px, 6vw, 52px);
-  font-family: Arial, sans-serif;
-  font-weight: bold;
-  transition: color 0.4s, text-shadow 0.4s;
-  user-select: none;
-  z-index: 10;
-}
+    canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .title {
+        position: absolute;
+        top: 8%;
+        width: 100%;
+        text-align: center;
+        font-size: clamp(32px, 6vw, 70px);
+        font-weight: bold;
+        letter-spacing: 3px;
+        text-shadow: 0 0 25px rgba(255,255,255,0.8);
+        animation: colorChange 3s infinite;
+        z-index: 10;
+    }
+
+    @keyframes colorChange {
+        0% { color: #ff3b3b; }
+        25% { color: #ffd93b; }
+        50% { color: #3bff7a; }
+        75% { color: #3bbcff; }
+        100% { color: #ff3b3b; }
+    }
 </style>
 </head>
-<body>
 
-<div id="title">🎆 HAPPY NEW YEAR 🎆</div>
+<body>
+<div class="title">🎉 HAPPY NEW YEAR 🎉</div>
 <canvas id="canvas"></canvas>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const title = document.getElementById("title");
 
 function resize() {
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
 resize();
-addEventListener("resize", resize);
+window.addEventListener("resize", resize);
 
-const COLORS = [
-  "#ff4040", "#ffd700", "#00e5ff",
-  "#00ff7f", "#ff00ff", "#ff8c00",
-  "#ffffff"
-];
-
-// ===== ROCKET (pháo bay lên) =====
-class Rocket {
-  constructor() {
-    this.x = Math.random() * canvas.width;
-    this.y = canvas.height;
-    this.vy = -(Math.random() * 3 + 8); // tốc độ bắn
-    this.gravity = 0.05;
-    this.exploded = false;
-    this.trail = [];
-  }
-
-  update() {
-    this.trail.push({ x: this.x, y: this.y });
-    if (this.trail.length > 15) this.trail.shift();
-
-    this.y += this.vy;
-    this.vy += this.gravity;
-
-    // khi gần đạt đỉnh thì nổ (giống pháo thật)
-    if (this.vy >= -0.5 && !this.exploded) {
-      this.exploded = true;
-      explode(this.x, this.y);
-    }
-  }
-
-  draw() {
-    // đuôi lửa
-    for (let i = 0; i < this.trail.length; i++) {
-      const p = this.trail[i];
-      ctx.globalAlpha = i / this.trail.length;
-      ctx.fillStyle = "orange";
-      ctx.fillRect(p.x, p.y, 2, 8);
-    }
-    ctx.globalAlpha = 1;
-
-    // đầu pháo
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(this.x, this.y, 2, 10);
-  }
+// ===== Utils =====
+function random(min, max) {
+    return Math.random() * (max - min) + min;
 }
 
-// ===== PARTICLE (tia pháo nổ) =====
+// ===== Firework Rocket =====
+class Firework {
+    constructor() {
+        this.x = random(canvas.width * 0.2, canvas.width * 0.8);
+        this.y = canvas.height;
+        this.targetY = random(canvas.height * 0.15, canvas.height * 0.45);
+        this.speed = random(7, 11);
+        this.color = `hsl(${random(0, 360)}, 100%, 60%)`;
+        this.exploded = false;
+    }
+
+    update() {
+        this.y -= this.speed;
+        this.speed *= 0.98;
+
+        if (this.y <= this.targetY && !this.exploded) {
+            this.exploded = true;
+            createExplosion(this.x, this.y, this.color);
+        }
+    }
+
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+    }
+}
+
+// ===== Particle =====
 class Particle {
-  constructor(x, y, angle, speed, color) {
-    this.x = x;
-    this.y = y;
-    this.vx = Math.cos(angle) * speed;
-    this.vy = Math.sin(angle) * speed;
-    this.gravity = 0.06;
-    this.life = 120;
-    this.color = color;
-  }
+    constructor(x, y, angle, speed, color, shape) {
+        this.x = x;
+        this.y = y;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.life = 100;
+        this.color = color;
+        this.shape = shape;
+    }
 
-  update() {
-    this.x += this.vx;
-    this.y += this.vy;
-    this.vy += this.gravity;
-    this.life--;
-  }
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.03;
+        this.life--;
+    }
 
-  draw() {
-    ctx.globalAlpha = this.life / 120;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, 2.2, 0, Math.PI * 2);
-    ctx.fillStyle = this.color;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.life / 100;
+
+        if (this.shape === "circle") {
+            ctx.beginPath();
+            ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (this.shape === "star") {
+            ctx.rotate(Math.random());
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                ctx.lineTo(0, 5);
+                ctx.translate(0, 5);
+                ctx.rotate((Math.PI * 2) / 10);
+                ctx.lineTo(0, -5);
+                ctx.translate(0, -5);
+                ctx.rotate((Math.PI * 2) / 10);
+            }
+            ctx.fill();
+        }
+
+        if (this.shape === "flower") {
+            for (let i = 0; i < 6; i++) {
+                ctx.beginPath();
+                ctx.rotate(Math.PI / 3);
+                ctx.arc(4, 0, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        ctx.restore();
+    }
 }
 
-let rockets = [];
+let fireworks = [];
 let particles = [];
 
-// ===== NỔ PHÁO =====
-function explode(x, y) {
-  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+// ===== Explosion =====
+function createExplosion(x, y, color) {
+    const count = random(60, 90);
+    const shapes = ["circle", "star", "flower"];
 
-  // đổi màu chữ theo pháo
-  title.style.color = color;
-  title.style.textShadow = `0 0 30px ${color}`;
-
-  const count = innerWidth < 600 ? 60 : 100;
-  for (let i = 0; i < count; i++) {
-    const angle = (Math.PI * 2 / count) * i;
-    const speed = Math.random() * 4 + 3;
-    particles.push(new Particle(x, y, angle, speed, color));
-  }
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = random(2, 6);
+        const shape = shapes[Math.floor(Math.random() * shapes.length)];
+        particles.push(new Particle(x, y, angle, speed, color, shape));
+    }
 }
 
-// ===== LOOP =====
+// ===== Loop =====
 function animate() {
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+    requestAnimationFrame(animate);
 
-  rockets = rockets.filter(r => {
-    r.update();
-    r.draw();
-    return !r.exploded;
-  });
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  particles = particles.filter(p => {
-    p.update();
-    p.draw();
-    return p.life > 0;
-  });
+    if (Math.random() < 0.04) {
+        fireworks.push(new Firework());
+    }
 
-  requestAnimationFrame(animate);
+    fireworks = fireworks.filter(fw => !fw.exploded);
+    fireworks.forEach(fw => {
+        fw.update();
+        fw.draw();
+    });
+
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+        p.update();
+        p.draw();
+    });
 }
+
 animate();
-
-// ===== AUTO FIRE =====
-setInterval(() => {
-  rockets.push(new Rocket());
-}, 1000);
 </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Happy New Year</title>
 
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(circle at bottom, #020111, #000);
+        font-family: Arial, sans-serif;
+    }
+
+    canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .title {
+        position: absolute;
+        top: 8%;
+        width: 100%;
+        text-align: center;
+        font-size: clamp(32px, 6vw, 70px);
+        font-weight: bold;
+        letter-spacing: 3px;
+        text-shadow: 0 0 25px rgba(255,255,255,0.8);
+        animation: colorChange 3s infinite;
+        z-index: 10;
+    }
+
+    @keyframes colorChange {
+        0% { color: #ff3b3b; }
+        25% { color: #ffd93b; }
+        50% { color: #3bff7a; }
+        75% { color: #3bbcff; }
+        100% { color: #ff3b3b; }
+    }
+</style>
+</head>
+
+<body>
+<div class="title">🎉 HAPPY NEW YEAR 🎉</div>
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// ===== Utils =====
+function random(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+// ===== Firework Rocket =====
+class Firework {
+    constructor() {
+        this.x = random(canvas.width * 0.2, canvas.width * 0.8);
+        this.y = canvas.height;
+        this.targetY = random(canvas.height * 0.15, canvas.height * 0.45);
+        this.speed = random(7, 11);
+        this.color = `hsl(${random(0, 360)}, 100%, 60%)`;
+        this.exploded = false;
+    }
+
+    update() {
+        this.y -= this.speed;
+        this.speed *= 0.98;
+
+        if (this.y <= this.targetY && !this.exploded) {
+            this.exploded = true;
+            createExplosion(this.x, this.y, this.color);
+        }
+    }
+
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+    }
+}
+
+// ===== Particle =====
+class Particle {
+    constructor(x, y, angle, speed, color, shape) {
+        this.x = x;
+        this.y = y;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.life = 100;
+        this.color = color;
+        this.shape = shape;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.03;
+        this.life--;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.life / 100;
+
+        if (this.shape === "circle") {
+            ctx.beginPath();
+            ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (this.shape === "star") {
+            ctx.rotate(Math.random());
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                ctx.lineTo(0, 5);
+                ctx.translate(0, 5);
+                ctx.rotate((Math.PI * 2) / 10);
+                ctx.lineTo(0, -5);
+                ctx.translate(0, -5);
+                ctx.rotate((Math.PI * 2) / 10);
+            }
+            ctx.fill();
+        }
+
+        if (this.shape === "flower") {
+            for (let i = 0; i < 6; i++) {
+                ctx.beginPath();
+                ctx.rotate(Math.PI / 3);
+                ctx.arc(4, 0, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        ctx.restore();
+    }
+}
+
+let fireworks = [];
+let particles = [];
+
+// ===== Explosion =====
+function createExplosion(x, y, color) {
+    const count = random(60, 90);
+    const shapes = ["circle", "star", "flower"];
+
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = random(2, 6);
+        const shape = shapes[Math.floor(Math.random() * shapes.length)];
+        particles.push(new Particle(x, y, angle, speed, color, shape));
+    }
+}
+
+// ===== Loop =====
+function animate() {
+    requestAnimationFrame(animate);
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (Math.random() < 0.04) {
+        fireworks.push(new Firework());
+    }
+
+    fireworks = fireworks.filter(fw => !fw.exploded);
+    fireworks.forEach(fw => {
+        fw.update();
+        fw.draw();
+    });
+
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+        p.update();
+        p.draw();
+    });
+}
+
+animate();
+</script>
 </body>
 </html>

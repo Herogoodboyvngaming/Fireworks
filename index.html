@@ -17,38 +17,46 @@
             text-align: center;
             pointer-events: none;
             z-index: 10;
-            text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,100,100,0.6);
-            animation: glow 3s infinite alternate;
+            text-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 50px rgba(255,200,100,0.7);
+            animation: glow 2.5s infinite alternate;
         }
         #main-title {
-            font-size: 72px;
+            font-size: 80px;
             margin: 0;
-            letter-spacing: 8px;
+            letter-spacing: 10px;
+            line-height: 1.2;
         }
         #subtitle {
-            font-size: 36px;
+            font-size: 40px;
             margin: 20px 0 0;
-            letter-spacing: 4px;
+            letter-spacing: 5px;
+            font-style: italic;
         }
         @keyframes glow {
-            from { text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,100,100,0.6); }
-            to { text-shadow: 0 0 30px rgba(255,255,255,1), 0 0 60px rgba(255,150,150,0.8); }
+            from { 
+                text-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 50px rgba(255,200,100,0.7); 
+                transform: translate(-50%, -50%) scale(1);
+            }
+            to { 
+                text-shadow: 0 0 35px rgba(255,255,255,1), 0 0 80px rgba(255,150,150,0.9); 
+                transform: translate(-50%, -50%) scale(1.05);
+            }
         }
         @media (max-width: 768px) {
-            #main-title { font-size: 48px; letter-spacing: 4px; }
-            #subtitle { font-size: 24px; }
+            #main-title { font-size: 52px; letter-spacing: 6px; }
+            #subtitle { font-size: 28px; }
         }
         @media (max-width: 480px) {
-            #main-title { font-size: 36px; }
-            #subtitle { font-size: 20px; }
+            #main-title { font-size: 40px; letter-spacing: 4px; }
+            #subtitle { font-size: 22px; }
         }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
     <div id="text-overlay">
-        <h1 id="main-title">HAPPY NEW YEAR</h1>
-        <p id="subtitle">Chúc Mừng Năm Mới</p>
+        <h1 id="main-title">🎆 HAPPY NEW YEAR 🎆<br>2026 🧨</h1>
+        <p id="subtitle">🎉 Chúc Mừng Năm Mới 🎉</p>
     </div>
 
     <script>
@@ -63,13 +71,13 @@
             canvas.height = window.innerHeight;
         });
 
-        // Siêu tối ưu cho mobile: detect và giảm mạnh hiệu ứng nặng
+        // Siêu tối ưu chống lag trên mobile
         const isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/.test(navigator.userAgent) || window.innerWidth <= 768;
-        const particleCountBase = isMobile ? 35 : 80;     // Giảm cực mạnh trên mobile
-        const flashCount = isMobile ? 5 : 15;             // Flash ít hơn
-        const autoInterval = isMobile ? 2500 : 1200;      // Bắn chậm hơn trên mobile → đỡ lag
-        const trailMaxLength = isMobile ? 6 : 12;          // Trail ngắn
-        const useShadow = !isMobile;                      // TẮT HOÀN TOÀN shadow/glow trên mobile (nguyên nhân lag chính)
+        const particleCountBase = isMobile ? 35 : 80;
+        const flashCount = isMobile ? 5 : 15;
+        const autoInterval = isMobile ? 2500 : 1200;
+        const trailMaxLength = isMobile ? 6 : 12;
+        const useShadow = !isMobile;
         const shadowAmount = 8;
 
         let particles = [];
@@ -81,7 +89,7 @@
                 this.color = color; this.size = size; this.life = life; this.maxLife = life;
             }
             update() {
-                this.vx *= 0.96; this.vy *= 0.96; this.vy += 0.08; // Gravity nhẹ
+                this.vx *= 0.96; this.vy *= 0.96; this.vy += 0.08;
                 this.x += this.vx; this.y += this.vy; this.life--;
             }
             draw() {
@@ -115,7 +123,6 @@
                 this.trail.push({x: this.x, y: this.y});
                 if (this.trail.length > trailMaxLength) this.trail.shift();
 
-                // Trail particle siêu ít
                 if (Math.random() > 0.6) {
                     particles.push(new Particle(this.x, this.y, Math.random()*1-0.5, Math.random()*1, `hsl(${this.hue},100%,60%)`, 0.8, 12));
                 }
@@ -132,14 +139,12 @@
             }
 
             draw() {
-                // Trail đơn giản
                 this.trail.forEach((p, i) => {
                     ctx.globalAlpha = i / this.trail.length * 0.6;
                     ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
                     ctx.fillRect(p.x - 0.8, p.y - 2, 1.6, 4);
                 });
 
-                // Rocket head nhẹ
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = 'white';
                 if (useShadow) {
@@ -164,7 +169,6 @@
                     particles.push(new Particle(this.x, this.y, vx, vy, color, size, life));
                 }
 
-                // Flash trắng ít
                 for (let i = 0; i < flashCount; i++) {
                     particles.push(new Particle(this.x, this.y, Math.random()*5-2.5, Math.random()*5-2.5, 'white', 3, 20));
                 }
@@ -172,7 +176,6 @@
         }
 
         function animate() {
-            // Fade siêu nhẹ để đỡ nặng GPU
             ctx.fillStyle = 'rgba(0,0,0,0.06)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -193,12 +196,12 @@
 
         animate();
 
-        // Pháo tự động bắn ngay khi load, không cần tap
+        // Pháo tự động bắn ngay lập tức
         setInterval(() => {
             fireworks.push(new Firework());
         }, autoInterval);
 
-        // Click/tap để bắn thêm (vui hơn, không bắt buộc)
+        // Click/tap để bắn thêm (tùy chọn vui)
         canvas.addEventListener('click', (e) => {
             fireworks.push(new Firework(e.clientX, e.clientY / 2));
         });

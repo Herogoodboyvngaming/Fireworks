@@ -3,58 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pháo Hoa Siêu Đẹp Với Âm Thanh Thật - Chúc Mừng Năm Mới 2026</title>
+    <title>Happy New Year 2026</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
-        #player {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            opacity: 0; /* Ẩn hoàn toàn video, chỉ giữ âm thanh */
+        canvas { display: block; }
+        #text-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-align: center;
             pointer-events: none;
-            z-index: 1;
+            z-index: 10;
+            text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,100,100,0.6);
+            animation: glow 3s infinite alternate;
         }
-        canvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 2;
-            display: block;
+        #main-title {
+            font-size: 72px;
+            margin: 0;
+            letter-spacing: 8px;
         }
-        #overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            color: white; font-family: Arial, sans-serif; text-align: center;
-            pointer-events: all; z-index: 10; background: rgba(0,0,0,0.7);
-            cursor: pointer;
+        #subtitle {
+            font-size: 36px;
+            margin: 20px 0 0;
+            letter-spacing: 4px;
         }
-        #title { font-size: 36px; margin-bottom: 30px; text-shadow: 0 0 15px rgba(255,255,255,0.9); }
-        #instructions { font-size: 24px; background: rgba(0,0,0,0.8); padding: 25px 40px; border-radius: 20px; max-width: 90%; }
-        #note { font-size: 18px; margin-top: 40px; color: #ffeb3b; max-width: 85%; }
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,100,100,0.6); }
+            to { text-shadow: 0 0 30px rgba(255,255,255,1), 0 0 60px rgba(255,150,150,0.8); }
+        }
         @media (max-width: 768px) {
-            #title { font-size: 28px; }
-            #instructions { font-size: 20px; padding: 20px 30px; }
-            #note { font-size: 16px; }
+            #main-title { font-size: 48px; letter-spacing: 4px; }
+            #subtitle { font-size: 24px; }
+        }
+        @media (max-width: 480px) {
+            #main-title { font-size: 36px; }
+            #subtitle { font-size: 20px; }
         }
     </style>
 </head>
 <body>
-    <div id="player"></div>
     <canvas id="canvas"></canvas>
-    <div id="overlay">
-        <div id="title">Chúc Mừng Năm Mới 2026! 🎆</div>
-        <div id="instructions">TAP/CLICK MẠNH VÀO ĐÂY (hoặc bất kỳ chỗ nào)<br>để bật ÂM THANH PHÁO HOA SIÊU CHÂN THỰC!</div>
-        <div id="note">Âm thanh lấy CHÍNH XÁC từ video bạn gửi (https://youtu.be/LCpaM0Ef39s) → nghe y chang, nổ liên tục xa gần cực đã!<br>Không có hình video, chỉ âm thanh thôi. Nếu không nghe: Tăng volume max, tắt im lặng, reload trang và tap lại!</div>
+    <div id="text-overlay">
+        <h1 id="main-title">HAPPY NEW YEAR</h1>
+        <p id="subtitle">Chúc Mừng Năm Mới</p>
     </div>
-
-    <!-- YouTube IFrame API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
 
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const overlay = document.getElementById('overlay');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -64,45 +63,17 @@
             canvas.height = window.innerHeight;
         });
 
+        // Siêu tối ưu cho mobile: detect và giảm mạnh hiệu ứng nặng
         const isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/.test(navigator.userAgent) || window.innerWidth <= 768;
-        const particleCountBase = isMobile ? 60 : 140; // Tăng nhẹ để khớp âm thanh intense hơn
-        const flashCount = isMobile ? 10 : 25;
-        const autoInterval = isMobile ? 1500 : 800; // Nhiều pháo hơn để khớp nổ liên tục
-        const trailMaxLength = isMobile ? 10 : 18;
-        const useShadow = !isMobile;
-        const shadowAmount = 12;
+        const particleCountBase = isMobile ? 35 : 80;     // Giảm cực mạnh trên mobile
+        const flashCount = isMobile ? 5 : 15;             // Flash ít hơn
+        const autoInterval = isMobile ? 2500 : 1200;      // Bắn chậm hơn trên mobile → đỡ lag
+        const trailMaxLength = isMobile ? 6 : 12;          // Trail ngắn
+        const useShadow = !isMobile;                      // TẮT HOÀN TOÀN shadow/glow trên mobile (nguyên nhân lag chính)
+        const shadowAmount = 8;
 
         let particles = [];
         let fireworks = [];
-        let hasInteracted = false;
-        let player; // YouTube player - chỉ dùng cho âm thanh
-
-        // YouTube Player API - âm thanh chính xác từ video bạn gửi
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', {
-                videoId: 'LCpaM0Ef39s', // Chính video bạn gửi
-                playerVars: {
-                    autoplay: 0,
-                    loop: 1,
-                    playlist: 'LCpaM0Ef39s', // Loop mượt
-                    controls: 0,
-                    modestbranding: 1,
-                    rel: 0,
-                    fs: 0,
-                    playsinline: 1, // Quan trọng cho mobile/iOS
-                    iv_load_policy: 3,
-                    start: 0 // Bắt đầu từ đầu
-                },
-                events: {
-                    'onReady': onPlayerReady
-                }
-            });
-        }
-
-        function onPlayerReady(event) {
-            player.setVolume(100);
-            player.unMute();
-        }
 
         class Particle {
             constructor(x, y, vx, vy, color, size, life) {
@@ -110,7 +81,7 @@
                 this.color = color; this.size = size; this.life = life; this.maxLife = life;
             }
             update() {
-                this.vx *= 0.97; this.vy *= 0.97; this.vy += 0.1;
+                this.vx *= 0.96; this.vy *= 0.96; this.vy += 0.08; // Gravity nhẹ
                 this.x += this.vx; this.y += this.vy; this.life--;
             }
             draw() {
@@ -133,9 +104,9 @@
             constructor(targetX = null, targetY = null) {
                 this.x = targetX || Math.random() * canvas.width;
                 this.y = canvas.height;
-                this.targetY = targetY || Math.random() * (canvas.height / 3) + 100;
-                this.vx = targetX ? (targetX - this.x) / 70 : (Math.random() - 0.5) * 2;
-                this.vy = -14 - Math.random() * 4; // Nhanh hơn xíu
+                this.targetY = targetY || Math.random() * (canvas.height / 4) + 80;
+                this.vx = targetX ? (targetX - this.x) / 80 : (Math.random() - 0.5) * 1.5;
+                this.vy = -12 - Math.random() * 3;
                 this.hue = Math.random() * 360;
                 this.trail = [];
             }
@@ -144,13 +115,14 @@
                 this.trail.push({x: this.x, y: this.y});
                 if (this.trail.length > trailMaxLength) this.trail.shift();
 
-                if (!isMobile || Math.random() > 0.4) {
-                    particles.push(new Particle(this.x, this.y, Math.random()*1.8-0.9, Math.random()*1.8, `hsl(${this.hue},100%,60%)`, 1.2, 18));
+                // Trail particle siêu ít
+                if (Math.random() > 0.6) {
+                    particles.push(new Particle(this.x, this.y, Math.random()*1-0.5, Math.random()*1, `hsl(${this.hue},100%,60%)`, 0.8, 12));
                 }
 
                 this.x += this.vx;
                 this.y += this.vy;
-                this.vy += 0.12;
+                this.vy += 0.1;
 
                 if (this.y <= this.targetY || this.vy >= 0) {
                     this.explode();
@@ -160,44 +132,48 @@
             }
 
             draw() {
+                // Trail đơn giản
                 this.trail.forEach((p, i) => {
-                    ctx.globalAlpha = i / this.trail.length * 0.8;
+                    ctx.globalAlpha = i / this.trail.length * 0.6;
                     ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
-                    ctx.fillRect(p.x - 1.2, p.y - 3, 2.4, 6);
+                    ctx.fillRect(p.x - 0.8, p.y - 2, 1.6, 4);
                 });
 
+                // Rocket head nhẹ
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = 'white';
                 if (useShadow) {
-                    ctx.shadowBlur = shadowAmount * 1.3;
+                    ctx.shadowBlur = shadowAmount * 1.2;
                     ctx.shadowColor = 'white';
                 }
-                ctx.fillRect(this.x - 1.2, this.y - 7, 2.4, 10);
+                ctx.fillRect(this.x - 0.8, this.y - 5, 1.6, 7);
                 if (useShadow) ctx.shadowBlur = 0;
             }
 
             explode() {
-                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 40 : 60));
+                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 20 : 40));
                 for (let i = 0; i < count; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * (isMobile ? 8 : 10) + 3;
+                    const speed = Math.random() * (isMobile ? 6 : 8) + 1.5;
                     const vx = Math.cos(angle) * speed;
                     const vy = Math.sin(angle) * speed;
-                    const hueVar = this.hue + Math.random() * 50 - 25;
+                    const hueVar = this.hue + Math.random() * 40 - 20;
                     const color = `hsl(${hueVar}, 100%, 50%)`;
-                    const size = Math.random() * 2.2 + 0.9;
-                    const life = Math.random() * 50 + 70;
+                    const size = Math.random() * 1.8 + 0.7;
+                    const life = Math.random() * 40 + 50;
                     particles.push(new Particle(this.x, this.y, vx, vy, color, size, life));
                 }
 
+                // Flash trắng ít
                 for (let i = 0; i < flashCount; i++) {
-                    particles.push(new Particle(this.x, this.y, Math.random()*7-3.5, Math.random()*7-3.5, 'white', 4.5, 30));
+                    particles.push(new Particle(this.x, this.y, Math.random()*5-2.5, Math.random()*5-2.5, 'white', 3, 20));
                 }
             }
         }
 
         function animate() {
-            ctx.fillStyle = 'rgba(0,0,0,0.09)';
+            // Fade siêu nhẹ để đỡ nặng GPU
+            ctx.fillStyle = 'rgba(0,0,0,0.06)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             particles = particles.filter(p => {
@@ -217,34 +193,20 @@
 
         animate();
 
-        // Auto bắn pháo nhiều hơn để khớp với âm thanh nổ liên tục
+        // Pháo tự động bắn ngay khi load, không cần tap
         setInterval(() => {
             fireworks.push(new Firework());
         }, autoInterval);
 
-        // Tap/Click để bật âm thanh từ video thật
-        function handleInteraction(e) {
+        // Click/tap để bắn thêm (vui hơn, không bắt buộc)
+        canvas.addEventListener('click', (e) => {
+            fireworks.push(new Firework(e.clientX, e.clientY / 2));
+        });
+        canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if (!hasInteracted) {
-                hasInteracted = true;
-                overlay.style.display = 'none';
-                if (player && player.playVideo) {
-                    player.playVideo();
-                    player.unMute();
-                    player.setVolume(100);
-                }
-            }
-            const x = e.clientX || (e.touches && e.touches[0].clientX);
-            const y = e.clientY || (e.touches && e.touches[0].clientY);
-            if (x && y) {
-                fireworks.push(new Firework(x, y / 2));
-            }
-        }
-
-        canvas.addEventListener('click', handleInteraction);
-        canvas.addEventListener('touchstart', handleInteraction, { passive: false });
-        overlay.addEventListener('click', handleInteraction);
-        overlay.addEventListener('touchstart', handleInteraction, { passive: false });
+            const touch = e.touches[0];
+            fireworks.push(new Firework(touch.clientX, touch.clientY / 2));
+        });
     </script>
 </body>
 </html>

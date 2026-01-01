@@ -38,8 +38,8 @@ canvas {
   text-align: center;
   font-size: clamp(14px, 3.5vw, 18px);
   color: #ccc;
+  opacity: 0.85;
   font-family: Arial, sans-serif;
-  opacity: 0.8;
   z-index: 10;
   user-select: none;
 }
@@ -70,6 +70,27 @@ addEventListener("resize", resize);
 const launchSound = document.getElementById("launchSound");
 const boomSound = document.getElementById("boomSound");
 
+/* ===== FIX ÂM THANH ===== */
+let soundEnabled = false;
+
+function enableSound() {
+  if (soundEnabled) return;
+
+  // unlock audio (bắt buộc với mobile)
+  launchSound.play().then(() => {
+    launchSound.pause();
+    launchSound.currentTime = 0;
+  }).catch(()=>{});
+
+  boomSound.play().then(() => {
+    boomSound.pause();
+    boomSound.currentTime = 0;
+  }).catch(()=>{});
+
+  soundEnabled = true;
+}
+/* ======================= */
+
 const COLORS = [
   "#ff4040", "#ffd700", "#00e5ff",
   "#00ff7f", "#ff00ff", "#ff8c00"
@@ -86,22 +107,20 @@ class Rocket {
   }
 
   update() {
-    // lưu trail
     this.trail.push({ x: this.x, y: this.y });
     if (this.trail.length > 10) this.trail.shift();
 
     this.y -= this.speed;
-    this.speed *= 0.995; // bay mượt hơn
+    this.speed *= 0.995;
 
     if (this.y <= canvas.height * (0.3 + Math.random() * 0.2) && !this.exploded) {
       this.exploded = true;
       explode(this.x, this.y);
-      boomSound.cloneNode().play();
+      if (soundEnabled) boomSound.cloneNode().play();
     }
   }
 
   draw() {
-    // trail
     for (let i = 0; i < this.trail.length; i++) {
       const p = this.trail[i];
       ctx.globalAlpha = i / this.trail.length;
@@ -110,7 +129,6 @@ class Rocket {
     }
     ctx.globalAlpha = 1;
 
-    // đầu pháo
     ctx.fillStyle = "#fff";
     ctx.fillRect(this.x, this.y, 2, 8);
   }
@@ -153,7 +171,6 @@ let particles = [];
 function explode(x, y) {
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
 
-  // đổi màu chữ theo pháo
   title.style.color = color;
   title.style.textShadow = `0 0 30px ${color}`;
 
@@ -165,7 +182,7 @@ function explode(x, y) {
 
 function launchRocket(x) {
   rockets.push(new Rocket(x));
-  launchSound.cloneNode().play();
+  if (soundEnabled) launchSound.cloneNode().play();
 }
 
 // ===== LOOP =====
@@ -194,6 +211,7 @@ setInterval(() => launchRocket(), 1000);
 
 // ===== CLICK / TOUCH =====
 addEventListener("pointerdown", e => {
+  enableSound();          // 🔓 unlock audio (QUAN TRỌNG)
   launchRocket(e.clientX);
 });
 </script>

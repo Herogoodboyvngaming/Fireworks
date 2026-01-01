@@ -19,7 +19,7 @@ canvas {
 
 #title {
   position: fixed;
-  top: 38%;
+  top: 40%;
   width: 100%;
   text-align: center;
   font-size: clamp(28px, 6vw, 52px);
@@ -29,25 +29,11 @@ canvas {
   user-select: none;
   z-index: 10;
 }
-
-#subtitle {
-  position: fixed;
-  top: 48%;
-  width: 100%;
-  text-align: center;
-  font-size: clamp(14px, 3.5vw, 18px);
-  color: #aaa;
-  opacity: 0.9;
-  font-family: Arial, sans-serif;
-  user-select: none;
-  z-index: 10;
-}
 </style>
 </head>
 <body>
 
 <div id="title">🎆 HAPPY NEW YEAR 🎆</div>
-<div id="subtitle">Bấm hoặc chạm màn hình để bắn pháo</div>
 <canvas id="canvas"></canvas>
 
 <script>
@@ -70,8 +56,8 @@ const COLORS = [
 
 // ===== ROCKET (pháo bay lên) =====
 class Rocket {
-  constructor(x) {
-    this.x = x;
+  constructor() {
+    this.x = Math.random() * canvas.width;
     this.y = canvas.height;
     this.vy = -(Math.random() * 3 + 8); // tốc độ bắn
     this.gravity = 0.05;
@@ -86,7 +72,8 @@ class Rocket {
     this.y += this.vy;
     this.vy += this.gravity;
 
-    if (this.vy >= -1 && !this.exploded) {
+    // khi gần đạt đỉnh thì nổ (giống pháo thật)
+    if (this.vy >= -0.5 && !this.exploded) {
       this.exploded = true;
       explode(this.x, this.y);
     }
@@ -103,3 +90,85 @@ class Rocket {
     ctx.globalAlpha = 1;
 
     // đầu pháo
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(this.x, this.y, 2, 10);
+  }
+}
+
+// ===== PARTICLE (tia pháo nổ) =====
+class Particle {
+  constructor(x, y, angle, speed, color) {
+    this.x = x;
+    this.y = y;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.gravity = 0.06;
+    this.life = 120;
+    this.color = color;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += this.gravity;
+    this.life--;
+  }
+
+  draw() {
+    ctx.globalAlpha = this.life / 120;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+let rockets = [];
+let particles = [];
+
+// ===== NỔ PHÁO =====
+function explode(x, y) {
+  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+
+  // đổi màu chữ theo pháo
+  title.style.color = color;
+  title.style.textShadow = `0 0 30px ${color}`;
+
+  const count = innerWidth < 600 ? 60 : 100;
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i;
+    const speed = Math.random() * 4 + 3;
+    particles.push(new Particle(x, y, angle, speed, color));
+  }
+}
+
+// ===== LOOP =====
+function animate() {
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  rockets = rockets.filter(r => {
+    r.update();
+    r.draw();
+    return !r.exploded;
+  });
+
+  particles = particles.filter(p => {
+    p.update();
+    p.draw();
+    return p.life > 0;
+  });
+
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ===== AUTO FIRE =====
+setInterval(() => {
+  rockets.push(new Rocket());
+}, 1000);
+</script>
+
+</body>
+</html>

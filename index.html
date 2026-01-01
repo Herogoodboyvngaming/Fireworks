@@ -43,35 +43,49 @@
             canvas.height = window.innerHeight;
         });
 
-        // Detect mobile mạnh hơn + giảm hiệu ứng nặng
+        // Detect mobile để giữ performance mượt
         const isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/.test(navigator.userAgent) || window.innerWidth <= 768;
-        const particleCountBase = isMobile ? 50 : 120;      // Giảm mạnh particle trên mobile
-        const flashCount = isMobile ? 8 : 20;               // Giảm flash trắng
-        const autoInterval = isMobile ? 2000 : 1000;        // Bắn chậm hơn trên mobile (ít pháo hơn)
-        const trailMaxLength = isMobile ? 8 : 15;           // Trail ngắn hơn
-        const useShadow = !isMobile;                        // TẮT HOÀN TOÀN shadow trên mobile → mượt nhất
+        const particleCountBase = isMobile ? 50 : 120;
+        const flashCount = isMobile ? 8 : 20;
+        const autoInterval = isMobile ? 2000 : 1000;
+        const trailMaxLength = isMobile ? 8 : 15;
+        const useShadow = !isMobile;
         const shadowAmount = 10;
 
         let particles = [];
         let fireworks = [];
         let hasInteracted = false;
 
-        // Preload âm thanh để chắc chắn hơn (clone khi play để phát nhiều lần)
-        const launchAudio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-firework-whistle-launch-1674.mp3');
-        const explosionAudio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-large-firework-explosion-1670.mp3');
+        // Nhiều âm thanh khác nhau để đa dạng, giống pháo hoa thật hơn (từ Mixkit - royalty free)
+        const launchUrls = [
+            'https://assets.mixkit.co/sfx/preview/mixkit-bottle-rocket-whistle-1672.mp3',      // Tiếng huýt chai
+            'https://assets.mixkit.co/sfx/preview/mixkit-rocket-whistle-launch-1673.mp3',       // Tiếng rocket mạnh
+            'https://assets.mixkit.co/sfx/preview/mixkit-firework-whistle-launch-1674.mp3'      // Tiếng huýt cổ điển
+            // Thêm nếu muốn: 'https://assets.mixkit.co/sfx/preview/mixkit-firework-launch-1671.mp3'
+        ];
+
+        const explosionUrls = [
+            'https://assets.mixkit.co/sfx/preview/mixkit-firework-explosion-1669.mp3',          // Nổ bình thường
+            'https://assets.mixkit.co/sfx/preview/mixkit-large-firework-explosion-1670.mp3',   // Nổ TO nhất
+            'https://assets.mixkit.co/sfx/preview/mixkit-single-firework-explosion-1675.mp3'    // Nổ đơn lẻ
+        ];
+
+        // Preload tất cả để mượt
+        const launchAudios = launchUrls.map(url => new Audio(url));
+        const explosionAudios = explosionUrls.map(url => new Audio(url));
 
         function playLaunch() {
             if (hasInteracted) {
-                const a = launchAudio.cloneNode();
-                a.volume = 0.6;
+                const a = launchAudios[Math.floor(Math.random() * launchAudios.length)].cloneNode();
+                a.volume = 0.7;
                 a.play().catch(() => {});
             }
         }
 
         function playExplosion() {
             if (hasInteracted) {
-                const a = explosionAudio.cloneNode();
-                a.volume = 0.8;
+                const a = explosionAudios[Math.floor(Math.random() * explosionAudios.length)].cloneNode();
+                a.volume = 0.9;  // To hơn xíu cho đã
                 a.play().catch(() => {});
             }
         }
@@ -118,7 +132,6 @@
                 this.trail.push({x: this.x, y: this.y});
                 if (this.trail.length > trailMaxLength) this.trail.shift();
 
-                // Trail particle rất ít trên mobile
                 if (!isMobile || Math.random() > 0.5) {
                     particles.push(new Particle(this.x, this.y, Math.random()*1.5-0.75, Math.random()*1.5, `hsl(${this.hue},100%,60%)`, 1, 15));
                 }
@@ -135,14 +148,12 @@
             }
 
             draw() {
-                // Trail đơn giản
                 this.trail.forEach((p, i) => {
                     ctx.globalAlpha = i / this.trail.length * 0.7;
                     ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
                     ctx.fillRect(p.x - 1, p.y - 2, 2, 5);
                 });
 
-                // Rocket head nhẹ
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = 'white';
                 if (useShadow) {
@@ -167,7 +178,6 @@
                     particles.push(new Particle(this.x, this.y, vx, vy, color, size, life));
                 }
 
-                // Flash trắng giảm mạnh
                 for (let i = 0; i < flashCount; i++) {
                     particles.push(new Particle(this.x, this.y, Math.random()*6-3, Math.random()*6-3, 'white', 4, 25));
                 }
@@ -177,7 +187,6 @@
         }
 
         function animate() {
-            // Fade background nhẹ hơn → đẹp + đỡ nặng
             ctx.fillStyle = 'rgba(0,0,0,0.08)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -198,26 +207,19 @@
 
         animate();
 
-        // Auto bắn ít hơn
         setInterval(() => {
-            if (hasInteracted) {  // Chỉ auto bắn visual + sound sau interact
-                fireworks.push(new Firework());
-            } else {
-                // Trước interact chỉ bắn visual nhẹ (không sound)
-                fireworks.push(new Firework());
-            }
+            fireworks.push(new Firework());
         }, autoInterval);
 
-        // Interaction: Click/Touch – unlock sound chắc chắn
         function handleInteraction(e) {
             e.preventDefault();
             if (!hasInteracted) {
                 hasInteracted = true;
                 overlay.style.display = 'none';
 
-                // Force unlock bằng cách play 1 sound ngay lập tức
+                // Force play vài sound để unlock chắc chắn
                 playLaunch();
-                playExplosion();  // Play cả 2 để chắc browser unlock context
+                playExplosion();
             }
             const x = e.clientX || (e.touches && e.touches[0].clientX);
             const y = e.clientY || (e.touches && e.touches[0].clientY);

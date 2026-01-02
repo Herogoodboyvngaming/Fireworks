@@ -35,11 +35,9 @@
         @keyframes glow {
             from { 
                 text-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 50px rgba(255,200,100,0.7); 
-                transform: translate(-50%, -50%) scale(1);
             }
             to { 
                 text-shadow: 0 0 35px rgba(255,255,255,1), 0 0 80px rgba(255,150,150,0.9); 
-                transform: translate(-50%, -50%) scale(1.05);
             }
         }
         @media (max-width: 768px) {
@@ -71,14 +69,14 @@
             canvas.height = window.innerHeight;
         });
 
-        // Siêu tối ưu chống lag trên mobile
+        // Tối ưu MAX cho mobile & web yếu (test mượt trên máy cũ luôn)
         const isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/.test(navigator.userAgent) || window.innerWidth <= 768;
-        const particleCountBase = isMobile ? 35 : 80;
-        const flashCount = isMobile ? 5 : 15;
-        const autoInterval = isMobile ? 2500 : 1200;
-        const trailMaxLength = isMobile ? 6 : 12;
-        const useShadow = !isMobile;
-        const shadowAmount = 8;
+        const particleCountBase = isMobile ? 20 : 50;      // Giảm cực mạnh particle
+        const flashCount = isMobile ? 3 : 10;              // Flash ít hơn
+        const autoInterval = isMobile ? 3500 : 1800;       // Bắn chậm hơn hẳn → đỡ nặng
+        const trailMaxLength = isMobile ? 4 : 8;            // Trail siêu ngắn
+        const useShadow = false;                           // TẮT HOÀN TOÀN shadow mọi thiết bị → mượt nhất
+        const useTrailParticles = !isMobile;               // Chỉ trail particle trên PC
 
         let particles = [];
         let fireworks = [];
@@ -89,21 +87,14 @@
                 this.color = color; this.size = size; this.life = life; this.maxLife = life;
             }
             update() {
-                this.vx *= 0.96; this.vy *= 0.96; this.vy += 0.08;
+                this.vx *= 0.95; this.vy *= 0.95; this.vy += 0.07; // Gravity nhẹ
                 this.x += this.vx; this.y += this.vy; this.life--;
             }
             draw() {
                 const opacity = this.life / this.maxLife;
-                ctx.globalAlpha = opacity;
+                ctx.globalAlpha = opacity > 0.1 ? opacity : 0; // Tránh vẽ particle gần tắt
                 ctx.fillStyle = this.color;
-                if (useShadow) {
-                    ctx.shadowBlur = shadowAmount;
-                    ctx.shadowColor = this.color;
-                }
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                if (useShadow) ctx.shadowBlur = 0;
+                ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2); // Dùng rect thay arc → nhanh hơn
                 ctx.globalAlpha = 1;
             }
         }
@@ -112,9 +103,9 @@
             constructor(targetX = null, targetY = null) {
                 this.x = targetX || Math.random() * canvas.width;
                 this.y = canvas.height;
-                this.targetY = targetY || Math.random() * (canvas.height / 4) + 80;
-                this.vx = targetX ? (targetX - this.x) / 80 : (Math.random() - 0.5) * 1.5;
-                this.vy = -12 - Math.random() * 3;
+                this.targetY = targetY || Math.random() * (canvas.height / 4) + 100;
+                this.vx = targetX ? (targetX - this.x) / 90 : 0;
+                this.vy = -10 - Math.random() * 2;
                 this.hue = Math.random() * 360;
                 this.trail = [];
             }
@@ -123,13 +114,14 @@
                 this.trail.push({x: this.x, y: this.y});
                 if (this.trail.length > trailMaxLength) this.trail.shift();
 
-                if (Math.random() > 0.6) {
-                    particles.push(new Particle(this.x, this.y, Math.random()*1-0.5, Math.random()*1, `hsl(${this.hue},100%,60%)`, 0.8, 12));
+                // Trail particle chỉ trên PC
+                if (useTrailParticles && Math.random() > 0.7) {
+                    particles.push(new Particle(this.x, this.y, Math.random()*0.8-0.4, Math.random()*0.8, `hsl(${this.hue},100%,60%)`, 0.6, 10));
                 }
 
                 this.x += this.vx;
                 this.y += this.vy;
-                this.vy += 0.1;
+                this.vy += 0.09;
 
                 if (this.y <= this.targetY || this.vy >= 0) {
                     this.explode();
@@ -139,69 +131,79 @@
             }
 
             draw() {
+                // Trail siêu đơn giản (rect thay vì nhiều lệnh)
                 this.trail.forEach((p, i) => {
-                    ctx.globalAlpha = i / this.trail.length * 0.6;
+                    ctx.globalAlpha = i / this.trail.length * 0.5;
                     ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
-                    ctx.fillRect(p.x - 0.8, p.y - 2, 1.6, 4);
+                    ctx.fillRect(p.x - 0.6, p.y - 1.5, 1.2, 3);
                 });
 
+                // Rocket head nhẹ
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = 'white';
-                if (useShadow) {
-                    ctx.shadowBlur = shadowAmount * 1.2;
-                    ctx.shadowColor = 'white';
-                }
-                ctx.fillRect(this.x - 0.8, this.y - 5, 1.6, 7);
-                if (useShadow) ctx.shadowBlur = 0;
+                ctx.fillRect(this.x - 0.6, this.y - 4, 1.2, 5);
             }
 
             explode() {
-                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 20 : 40));
+                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 15 : 30));
                 for (let i = 0; i < count; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * (isMobile ? 6 : 8) + 1.5;
+                    const angle = (i / count) * Math.PI * 2; // Phân bố đều hơn → đẹp + nhanh
+                    const speed = Math.random() * (isMobile ? 5 : 7) + 1;
                     const vx = Math.cos(angle) * speed;
                     const vy = Math.sin(angle) * speed;
-                    const hueVar = this.hue + Math.random() * 40 - 20;
+                    const hueVar = this.hue + Math.random() * 30 - 15;
                     const color = `hsl(${hueVar}, 100%, 50%)`;
-                    const size = Math.random() * 1.8 + 0.7;
-                    const life = Math.random() * 40 + 50;
+                    const size = Math.random() * 1.5 + 0.6;
+                    const life = Math.random() * 30 + 40;
                     particles.push(new Particle(this.x, this.y, vx, vy, color, size, life));
                 }
 
+                // Flash trắng siêu ít
                 for (let i = 0; i < flashCount; i++) {
-                    particles.push(new Particle(this.x, this.y, Math.random()*5-2.5, Math.random()*5-2.5, 'white', 3, 20));
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 3;
+                    particles.push(new Particle(this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, 'white', 2.5, 15));
                 }
             }
         }
 
         function animate() {
-            ctx.fillStyle = 'rgba(0,0,0,0.06)';
+            // Fade siêu nhẹ + chỉ mỗi 10 frame clear full để tiết kiệm GPU
+            ctx.fillStyle = 'rgba(0,0,0,0.04)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            particles = particles.filter(p => {
+            // Xử lý particle (filter + update + draw trong 1 vòng)
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
                 p.update();
-                p.draw();
-                return p.life > 0;
-            });
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    p.draw();
+                }
+            }
 
-            fireworks = fireworks.filter(f => {
-                const alive = f.update();
-                f.draw();
-                return alive;
-            });
+            // Fireworks
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                const f = fireworks[i];
+                if (!f.update()) {
+                    fireworks.splice(i, 1);
+                } else {
+                    f.draw();
+                }
+            }
 
             requestAnimationFrame(animate);
         }
 
         animate();
 
-        // Pháo tự động bắn ngay lập tức
+        // Bắn pháo tự động, chậm hơn để mượt max
         setInterval(() => {
             fireworks.push(new Firework());
         }, autoInterval);
 
-        // Click/tap để bắn thêm (tùy chọn vui)
+        // Click/tap bắn thêm (vui, không ảnh hưởng performance nhiều)
         canvas.addEventListener('click', (e) => {
             fireworks.push(new Firework(e.clientX, e.clientY / 2));
         });

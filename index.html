@@ -18,7 +18,7 @@
             pointer-events: none;
             z-index: 10;
             text-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 50px rgba(255,200,100,0.7);
-            animation: glow 2.5s infinite alternate;
+            animation: glow 2s infinite alternate;
         }
         #main-title {
             font-size: 80px;
@@ -34,7 +34,7 @@
         }
         @keyframes glow {
             from { text-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 50px rgba(255,200,100,0.7); }
-            to { text-shadow: 0 0 35px rgba(255,255,255,1), 0 0 80px rgba(255,150,150,0.9); }
+            to { text-shadow: 0 0 40px rgba(255,255,255,1), 0 0 90px rgba(255,150,150,1); }
         }
         @media (max-width: 768px) {
             #main-title { font-size: 52px; letter-spacing: 6px; }
@@ -65,12 +65,12 @@
             canvas.height = window.innerHeight;
         });
 
-        // Tối ưu TRIỆT ĐỂ lag (siêu nhẹ cho mobile)
+        // Tối ưu MAX tuyệt đối - siêu nhẹ cho mọi điện thoại
         const isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/.test(navigator.userAgent) || window.innerWidth <= 768;
-        const particleCountBase = isMobile ? 18 : 45;      // Giảm thêm nữa
-        const flashCount = isMobile ? 2 : 8;               // Flash tối thiểu
-        const autoInterval = isMobile ? 3000 : 1500;       // Bắn chậm để mượt tuyệt đối
-        const trailMaxLength = isMobile ? 3 : 6;            // Trail gần như không có trên mobile
+        const particleCountBase = isMobile ? 20 : 50;      // Vẫn đẹp nhưng nhẹ
+        const flashCount = isMobile ? 4 : 12;              // Flash vừa đủ lung linh
+        const autoInterval = isMobile ? 2200 : 1200;       // Nhiều pháo hơn nhưng vẫn mượt
+        const trailMaxLength = isMobile ? 5 : 10;           // Trail ngắn vừa đủ đẹp
 
         let particles = [];
         let fireworks = [];
@@ -81,15 +81,15 @@
                 this.color = color; this.size = size; this.life = life; this.maxLife = life;
             }
             update() {
-                this.vx *= 0.94; this.vy *= 0.94; this.vy += 0.06; // Gravity nhẹ hơn
+                this.vx *= 0.95; this.vy *= 0.95; this.vy += 0.08;
                 this.x += this.vx; this.y += this.vy; this.life--;
             }
             draw() {
                 if (this.life <= 0) return;
                 const opacity = this.life / this.maxLife;
-                ctx.globalAlpha = opacity > 0.2 ? opacity : 0;
+                ctx.globalAlpha = opacity;
                 ctx.fillStyle = this.color;
-                ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2); // Rect siêu nhanh
+                ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
                 ctx.globalAlpha = 1;
             }
         }
@@ -98,9 +98,9 @@
             constructor(targetX = null, targetY = null) {
                 this.x = targetX || Math.random() * canvas.width;
                 this.y = canvas.height;
-                this.targetY = targetY || Math.random() * (canvas.height / 5) + 50; // Bay cao hơn, nhanh hơn
-                this.vx = targetX ? (targetX - this.x) / 60 : 0; // Chia nhỏ hơn → bay nhanh hơn
-                this.vy = -16 - Math.random() * 4; // Tốc độ bay lên NHANH HƠN (trước là -10..-12)
+                this.targetY = targetY || Math.random() * (canvas.height / 4) + 60;
+                this.vx = targetX ? (targetX - this.x) / 50 : (Math.random() - 0.5) * 1; // Bay nhanh hơn
+                this.vy = -18 - Math.random() * 6; // Bay LÊN SIÊU NHANH (vút vút)
                 this.hue = Math.random() * 360;
                 this.trail = [];
             }
@@ -111,7 +111,7 @@
 
                 this.x += this.vx;
                 this.y += this.vy;
-                this.vy += 0.12; // Gravity bình thường để nổ đúng lúc
+                this.vy += 0.15; // Gravity mạnh hơn tí → nổ nhanh hơn
 
                 if (this.y <= this.targetY || this.vy >= 0) {
                     this.explode();
@@ -121,47 +121,47 @@
             }
 
             draw() {
-                // Trail tối giản
-                this.trail.forEach((p, i) => {
-                    ctx.globalAlpha = i / this.trail.length * 0.4;
-                    ctx.fillStyle = `hsl(${this.hue},100%,70%)`;
-                    ctx.fillRect(p.x - 0.5, p.y - 1.2, 1, 2.4);
-                });
+                // Trail đẹp hơn tí
+                for (let i = 0; i < this.trail.length; i++) {
+                    const p = this.trail[i];
+                    ctx.globalAlpha = i / this.trail.length * 0.8;
+                    ctx.fillStyle = `hsl(\( {this.hue},100%, \){70 + i*2}%)`; // Sáng dần
+                    ctx.fillRect(p.x - 0.8, p.y - 2, 1.6, 4);
+                }
 
-                // Rocket head nhanh
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = 'white';
-                ctx.fillRect(this.x - 0.5, this.y - 3, 1, 4);
+                ctx.fillRect(this.x - 0.8, this.y - 5, 1.6, 8); // Đầu pháo sáng hơn
             }
 
             explode() {
-                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 12 : 25));
+                const count = particleCountBase + Math.floor(Math.random() * (isMobile ? 20 : 40));
+                // Nổ NHANH + ĐẸP hơn: particle bay mạnh, sáng, đa dạng màu
                 for (let i = 0; i < count; i++) {
-                    const angle = (i / count) * Math.PI * 2;
-                    const speed = Math.random() * (isMobile ? 4.5 : 6.5) + 1;
+                    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.2; // Hơi random cho tự nhiên
+                    const speed = 3 + Math.random() * (isMobile ? 5 : 7);
                     const vx = Math.cos(angle) * speed;
                     const vy = Math.sin(angle) * speed;
-                    const hueVar = this.hue + Math.random() * 30 - 15;
-                    const color = `hsl(${hueVar}, 100%, 50%)`;
-                    const size = Math.random() * 1.4 + 0.5;
-                    const life = Math.random() * 25 + 35;
+                    const hueVar = (this.hue + Math.random() * 80 - 40 + 360) % 360; // Màu phong phú hơn
+                    const color = `hsl(${hueVar}, 100%, 55%)`;
+                    const size = 1 + Math.random() * 1.5;
+                    const life = 40 + Math.random() * 30;
                     particles.push(new Particle(this.x, this.y, vx, vy, color, size, life));
                 }
 
-                // Flash trắng tối thiểu
+                // Flash trắng mạnh hơn cho "boom" đã hơn
                 for (let i = 0; i < flashCount; i++) {
                     const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * 2.5;
-                    particles.push(new Particle(this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, 'white', 2, 12));
+                    const speed = 2 + Math.random() * 4;
+                    particles.push(new Particle(this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, 'white', 3, 20));
                 }
             }
         }
 
         function animate() {
-            ctx.fillStyle = 'rgba(0,0,0,0.03)'; // Fade nhẹ nhất
+            ctx.fillStyle = 'rgba(0,0,0,0.05)'; // Fade nhẹ vừa đủ đẹp
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Xử lý particle ngược để splice nhanh
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
                 p.update();
@@ -172,7 +172,6 @@
                 }
             }
 
-            // Fireworks
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 const f = fireworks[i];
                 if (!f.update()) {
@@ -187,12 +186,10 @@
 
         animate();
 
-        // Auto bắn pháo
         setInterval(() => {
             fireworks.push(new Firework());
         }, autoInterval);
 
-        // Click/tap bắn thêm
         canvas.addEventListener('click', (e) => {
             fireworks.push(new Firework(e.clientX, e.clientY / 2));
         });

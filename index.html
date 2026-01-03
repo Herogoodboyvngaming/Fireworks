@@ -7,6 +7,8 @@
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
         canvas { display: block; }
+
+        /* Top controls */
         #top-controls {
             position: fixed;
             top: 15px;
@@ -14,7 +16,7 @@
             transform: translateX(-50%);
             z-index: 100;
             display: flex;
-            gap: 40px;
+            gap: 30px;
             color: white;
             font-size: 32px;
         }
@@ -24,87 +26,124 @@
             border-radius: 50%;
             background: rgba(255,255,255,0.15);
             backdrop-filter: blur(5px);
+            transition: background 0.3s;
         }
-        .muted { opacity: 0.4; }
-        #unlock-hint {
+        .top-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .muted, .paused { opacity: 0.4; }
+
+        /* Settings Panel giữ nguyên */
+        #settings-panel { /* ... giữ nguyên như code trước ... */ }
+
+        /* Finale Mode Flash Effect - MỚI THÊM */
+        #finale-flash {
             position: fixed;
-            top: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 20px;
-            background: rgba(0,0,0,0.6);
-            padding: 10px 20px;
-            border-radius: 10px;
-            z-index: 90;
-            display: none;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 150;
+            transition: opacity 0.1s ease-out;
         }
-        /* Settings panel giữ nguyên */
-        /* ... (giữ phần CSS settings như trước) ... */
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
 
     <div id="top-controls">
+        <div id="play-btn" class="top-btn">▶️</div>
         <div id="sound-btn" class="top-btn">🔊</div>
         <div id="settings-btn" class="top-btn">⚙️</div>
     </div>
 
-    <div id="unlock-hint">Tap màn hình để bật âm thanh nổ!</div>
+    <!-- Flash effect cho Finale Mode -->
+    <div id="finale-flash"></div>
 
-    <!-- Settings panel giữ nguyên như code trước -->
+    <!-- Settings Panel giữ nguyên -->
 
     <script>
-        // ... (giữ phần canvas, pháo hoa, trail dài đẹp như code trước) ...
+        // ... (giữ nguyên phần khai báo biến, preload sound, class Particle, class Firework như code trước) ...
 
-        let soundEnabled = true;
-        let hasInteracted = false;
+        let finaleMode = false;
+        let finaleIntensity = 0; // Để tăng dần khi Finale Mode bật
 
-        // Preload sound mạnh hơn
-        const explosionUrls = [
-            'https://assets.mixkit.co/sfx/preview/mixkit-large-firework-explosion-1670.mp3',
-            'https://assets.mixkit.co/sfx/preview/mixkit-firework-explosion-1669.mp3',
-            'https://assets.mixkit.co/sfx/preview/mixkit-single-firework-explosion-1675.mp3'
-        ];
-        const explosionAudios = explosionUrls.map(url => {
-            const a = new Audio(url);
-            a.preload = 'auto';
-            return a;
-        });
+        // MỚI THÊM: Flash effect
+        const finaleFlash = document.getElementById('finale-flash');
 
-        // Thêm sound ngắn im lặng để force unlock (trick hay)
-        const silentSound = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
-
-        function forceUnlock() {
-            silentSound.play().catch(() => {});
-            explosionAudios.forEach(a => {
-                a.play().catch(() => {});
-            });
+        function triggerFlash() {
+            finaleFlash.style.opacity = '0.6';
+            setTimeout(() => {
+                finaleFlash.style.opacity = '0';
+            }, 100);
         }
 
-        function playExplosion() {
-            if (!soundEnabled || !hasInteracted) return;
-            const a = explosionAudios[Math.floor(Math.random() * explosionAudios.length)].cloneNode();
-            a.volume = 1.0;
-            a.play().catch(() => {});
-        }
+        class Firework {
+            // ... giữ nguyên constructor, update, draw ...
 
-        // Hiển thị hint lần đầu
-        document.getElementById('unlock-hint').style.display = 'block';
+            explode() {
+                // Tăng số particle khi Finale Mode
+                const count = finaleMode 
+                    ? particleCountBase + Math.floor(Math.random() * 100 + 100) 
+                    : particleCountBase + Math.floor(Math.random() * 60);
 
-        function unlockSound(e) {
-            if (!hasInteracted) {
-                hasInteracted = true;
-                document.getElementById('unlock-hint').style.display = 'none';
-                forceUnlock(); // Force unlock mạnh
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = finaleMode ? (4 + Math.random() * 10) : (2 + Math.random() * 8);
+                    const vx = Math.cos(angle) * speed;
+                    const vy = Math.sin(angle) * speed;
+                    const hue = Math.random() * 360;
+                    const color = `hsl(${hue}, 100%, ${finaleMode ? 70 : 60}%)`; // Sáng hơn khi finale
+                    const size = finaleMode ? (2 + Math.random() * 3) : (1.5 + Math.random() * 2);
+                    const life = 60 + Math.random() * 60;
+                    particles.push(new Particle(this.x, this.y, vx, vy, color, size, life, true));
+                }
+
+                // Flash mạnh khi Finale Mode
+                if (finaleMode) triggerFlash();
+
+                playExplosion();
             }
         }
 
-        canvas.addEventListener('click', (e) => { unlockSound(); fireworks.push(new Firework(e.clientX, e.clientY / 2)); });
-        canvas.addEventListener('touchstart', (e) => { unlockSound(); e.preventDefault(); const t = e.touches[0]; fireworks.push(new Firework(t.clientX, t.clientY / 2)); });
+        function animate() {
+            if (!isPlaying) {
+                requestAnimationFrame(animate);
+                return;
+            }
 
-        // ... (giữ phần còn lại như sound toggle, settings, animate...) ...
+            // Finale intensity: tăng dần số pháo khi bật Finale Mode
+            if (finaleMode) {
+                finaleIntensity++;
+                if (finaleIntensity % 10 === 0) { // Bắn thêm pháo dồn dập
+                    fireworks.push(new Firework());
+                    if (Math.random() > 0.7) fireworks.push(new Firework());
+                }
+            }
+
+            ctx.fillStyle = finaleMode ? 'rgba(10,0,20,0.15)' : 'rgba(0,0,0,0.1)'; // Background tím nhẹ khi finale
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // ... (giữ nguyên phần update và draw particles + fireworks) ...
+
+            requestAnimationFrame(animate);
+        }
+
+        // ... (giữ nguyên animate(), autoFireInterval, unlockSound, event listeners) ...
+
+        // Finale Mode toggle - MỚI CẬP NHẬT
+        document.getElementById('finale-mode').addEventListener('change', (e) => {
+            finaleMode = e.target.checked;
+            if (finaleMode) {
+                // Dồn dập pháo khi bật finale
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => fireworks.push(new Firework()), i * 200);
+                }
+            }
+        });
+
+        // ... (giữ nguyên các settings khác) ...
     </script>
 </body>
 </html>

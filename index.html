@@ -3,102 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Happy New Year 2026</title>
+    <title>Fireworks</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
         canvas { display: block; }
-        #text-overlay {
-            position: absolute;
-            top: 50%;
+
+        /* Top controls giống hệt bản gốc */
+        #top-controls {
+            position: fixed;
+            top: 15px;
             left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ffd700; /* Vàng ánh kim như trong ảnh */
-            font-family: 'Arial Black', Arial, sans-serif;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 40px;
+            color: white;
+            font-size: 32px;
+        }
+        .top-btn {
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
+        }
+        .muted { opacity: 0.4; }
+
+        /* Settings Panel giống 100% */
+        #settings-panel {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 40px;
+            margin-bottom: 20px;
+        }
+        #close-settings {
+            font-size: 40px;
+            cursor: pointer;
+        }
+        #settings-info {
+            font-size: 18px;
+            opacity: 0.7;
+            margin-bottom: 40px;
             text-align: center;
-            pointer-events: none;
-            z-index: 10;
-            text-shadow: 
-                0 0 10px #fff,
-                0 0 20px #fff,
-                0 0 30px #ffd700,
-                0 0 40px #ffd700,
-                0 0 50px #ffd700,
-                0 0 70px #ffd700,
-                0 0 90px #ffd700;
-            animation: neonGlow 2s infinite alternate;
         }
-        #year {
-            font-size: 120px;
-            margin: 0;
-            letter-spacing: 15px;
-            font-weight: bold;
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 28px;
+            margin-bottom: 30px;
         }
-        #happy-new-year {
-            font-size: 60px;
-            margin: 20px 0 0;
-            font-style: italic;
-            letter-spacing: 8px;
+        .setting-label {
+            opacity: 0.9;
         }
-        @keyframes neonGlow {
-            from { 
-                text-shadow: 
-                    0 0 10px #fff,
-                    0 0 20px #fff,
-                    0 0 30px #ffd700,
-                    0 0 40px #ffd700,
-                    0 0 50px #ffd700,
-                    0 0 60px #ffd700,
-                    0 0 80px #ffd700;
-            }
-            to { 
-                text-shadow: 
-                    0 0 20px #fff,
-                    0 0 30px #fff,
-                    0 0 40px #ffd700,
-                    0 0 50px #ffd700,
-                    0 0 70px #ffd700,
-                    0 0 90px #ffd700,
-                    0 0 110px #ffd700;
-            }
+        select, input[type="checkbox"] {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            font-size: 24px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        select { width: 200px; }
+        input[type="checkbox"] {
+            width: 50px; height: 50px;
+            accent-color: #007bff;
+        }
+        #settings-footer {
+            margin-top: auto;
+            text-align: center;
+            opacity: 0.6;
+            font-size: 16px;
         }
         @media (max-width: 768px) {
-            #year { font-size: 80px; letter-spacing: 10px; }
-            #happy-new-year { font-size: 40px; }
-        }
-        @media (max-width: 480px) {
-            #year { font-size: 60px; letter-spacing: 6px; }
-            #happy-new-year { font-size: 30px; }
+            #top-controls { font-size: 26px; gap: 30px; }
+            #settings-header { font-size: 36px; }
+            .setting-item { font-size: 24px; }
         }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <div id="text-overlay">
-        <div id="year">2026</div>
-        <div id="happy-new-year">Happy New Year</div>
+
+    <!-- Top controls -->
+    <div id="top-controls">
+        <div id="sound-btn" class="top-btn">🔊</div>
+        <div id="settings-btn" class="top-btn">⚙️</div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel">
+        <div id="settings-header">
+            <span>SETTINGS</span>
+            <span id="close-settings">×</span>
+        </div>
+        <div id="settings-info">For more info, click any label.</div>
+
+        <div class="setting-item">
+            <span class="setting-label">SHELL TYPE</span>
+            <select id="shell-type">
+                <option>Crackle</option>
+                <option>Peony</option>
+                <option>Chrysanthemum</option>
+                <option>Willow</option>
+            </select>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">SHELL SIZE</span>
+            <select id="shell-size">
+                <option>3"</option>
+                <option>4"</option>
+                <option>5"</option>
+                <option>6"</option>
+                <option>8"</option>
+            </select>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">QUALITY</span>
+            <select id="quality">
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+            </select>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">SKY LIGHTING</span>
+            <select id="sky-lighting">
+                <option>None</option>
+                <option>Dim</option>
+                <option>Normal</option>
+            </select>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">SCALE</span>
+            <select id="scale">
+                <option>50%</option>
+                <option>75%</option>
+                <option>90%</option>
+                <option>100%</option>
+            </select>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">AUTO FIRE</span>
+            <input type="checkbox" id="auto-fire" checked>
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">FINALE MODE</span>
+            <input type="checkbox" id="finale-mode">
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">HIDE CONTROLS</span>
+            <input type="checkbox" id="hide-controls">
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">FULLSCREEN</span>
+            <input type="checkbox" id="fullscreen">
+        </div>
+        <div class="setting-item">
+            <span class="setting-label">OPEN SHUTTER</span>
+            <input type="checkbox" id="open-shutter">
+        </div>
+
+        <div id="settings-footer">Passionately built Sayn Achhava.</div>
     </div>
 
     <script>
+        // Phần canvas và pháo hoa giữ nguyên (đẹp + mượt)
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
 
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-
-        // Tối ưu cao cho mobile, vẫn đẹp như ảnh
-        const isMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/.test(navigator.userAgent) || window.innerWidth <= 768;
-        const particleCountBase = isMobile ? 30 : 70;      // Đủ để nổ to đẹp như ảnh
-        const flashCount = isMobile ? 6 : 15;
-        const autoInterval = isMobile ? 2000 : 1000;       // Nhiều pháo liên tục
-        const trailMaxLength = isMobile ? 8 : 15;
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent) || window.innerWidth <= 768;
+        let particleCountBase = isMobile ? 35 : 80;
+        let flashCount = isMobile ? 8 : 20;
+        let autoInterval = isMobile ? 1800 : 900;
 
         let particles = [];
         let fireworks = [];
+        let soundEnabled = true;
+        let hasInteracted = false;
+
+        const explosionUrls = [
+            'https://assets.mixkit.co/sfx/preview/mixkit-large-firework-explosion-1670.mp3',
+            'https://assets.mixkit.co/sfx/preview/mixkit-firework-explosion-1669.mp3',
+            'https://assets.mixkit.co/sfx/preview/mixkit-single-firework-explosion-1675.mp3'
+        ];
+        const explosionAudios = explosionUrls.map(url => new Audio(url));
+
+        function playExplosion() {
+            if (!soundEnabled || !hasInteracted) return;
+            const a = explosionAudios[Math.floor(Math.random() * explosionAudios.length)].cloneNode();
+            a.volume = 0.7;
+            a.play().catch(() => {});
+        }
 
         class Particle {
             constructor(x, y, vx, vy, color, size, life) {
@@ -123,100 +235,128 @@
             constructor(targetX = null, targetY = null) {
                 this.x = targetX || Math.random() * canvas.width;
                 this.y = canvas.height;
-                this.targetY = targetY || Math.random() * (canvas.height * 0.25) + 50; // Nổ ở trên cao như ảnh
+                this.targetY = targetY || Math.random() * (canvas.height * 0.25) + 50;
                 this.vx = targetX ? (targetX - this.x) / 60 : (Math.random() - 0.5) * 2;
-                this.vy = -17 - Math.random() * 5; // Bay nhanh
+                this.vy = -17 - Math.random() * 5;
                 this.hue = Math.random() * 360;
                 this.trail = [];
             }
-
             update() {
                 this.trail.push({x: this.x, y: this.y});
-                if (this.trail.length > trailMaxLength) this.trail.shift();
-
+                if (this.trail.length > (isMobile ? 8 : 15)) this.trail.shift();
                 this.x += this.vx;
                 this.y += this.vy;
                 this.vy += 0.14;
-
                 if (this.y <= this.targetY || this.vy >= 0) {
                     this.explode();
                     return false;
                 }
                 return true;
             }
-
             draw() {
-                // Trail sáng dần
                 for (let i = 0; i < this.trail.length; i++) {
                     const p = this.trail[i];
                     ctx.globalAlpha = i / this.trail.length * 0.9;
                     ctx.fillStyle = `hsl(\( {this.hue},100%, \){60 + i*3}%)`;
                     ctx.fillRect(p.x - 1, p.y - 3, 2, 6);
                 }
-
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(this.x - 1, this.y - 6, 2, 10);
             }
-
             explode() {
                 const count = particleCountBase + Math.floor(Math.random() * 40);
-                // Nổ TO, TRÒN, ĐẸP như trong ảnh
                 for (let i = 0; i < count; i++) {
                     const angle = (i / count) * Math.PI * 2;
                     const speed = 3 + Math.random() * 6;
                     const vx = Math.cos(angle) * speed;
                     const vy = Math.sin(angle) * speed;
-                    // Màu sắc rực rỡ như ảnh: đỏ, xanh, vàng, tím, trắng
                     const colors = ['#ff0000', '#00ff00', '#ffff00', '#ff00ff', '#00ffff', '#ffffff', '#ff8800'];
                     const color = colors[Math.floor(Math.random() * colors.length)];
                     const size = 1.2 + Math.random() * 1.8;
                     const life = 50 + Math.random() * 40;
                     particles.push(new Particle(this.x, this.y, vx, vy, color, size, life));
                 }
-
-                // Flash trắng mạnh để tạo hiệu ứng nổ chói
                 for (let i = 0; i < flashCount; i++) {
                     const angle = Math.random() * Math.PI * 2;
                     const speed = Math.random() * 5;
                     particles.push(new Particle(this.x, this.y, Math.cos(angle)*speed, Math.sin(angle)*speed, '#ffffff', 4, 25));
                 }
+                playExplosion();
             }
         }
 
         function animate() {
             ctx.fillStyle = 'rgba(0,0,0,0.06)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
                 p.update();
                 if (p.life <= 0) particles.splice(i, 1);
                 else p.draw();
             }
-
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 const f = fireworks[i];
                 if (!f.update()) fireworks.splice(i, 1);
                 else f.draw();
             }
-
             requestAnimationFrame(animate);
         }
-
         animate();
 
-        // Bắn pháo liên tục, nhiều tầng như ảnh
-        setInterval(() => {
-            fireworks.push(new Firework());
-        }, autoInterval);
+        let autoFireInterval = setInterval(() => fireworks.push(new Firework()), autoInterval);
 
-        // Bắn thêm khi click/tap
-        canvas.addEventListener('click', (e) => fireworks.push(new Firework(e.clientX, e.clientY / 2)));
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const t = e.touches[0];
-            fireworks.push(new Firework(t.clientX, t.clientY / 2));
+        function unlockSound() {
+            if (!hasInteracted) {
+                hasInteracted = true;
+                playExplosion();
+            }
+        }
+
+        canvas.addEventListener('click', (e) => { unlockSound(); fireworks.push(new Firework(e.clientX, e.clientY / 2)); });
+        canvas.addEventListener('touchstart', (e) => { unlockSound(); e.preventDefault(); const t = e.touches[0]; fireworks.push(new Firework(t.clientX, t.clientY / 2)); });
+
+        // Sound toggle
+        const soundBtn = document.getElementById('sound-btn');
+        soundBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
+            soundBtn.classList.toggle('muted', !soundEnabled);
+            unlockSound();
+        });
+
+        // Settings panel
+        const settingsPanel = document.getElementById('settings-panel');
+        const settingsBtn = document.getElementById('settings-btn');
+        const closeSettings = document.getElementById('close-settings');
+
+        settingsBtn.addEventListener('click', () => settingsPanel.style.display = 'flex');
+        closeSettings.addEventListener('click', () => settingsPanel.style.display = 'none');
+
+        // Settings hoạt động
+        document.getElementById('quality').addEventListener('change', (e) => {
+            if (e.target.value === 'Low') { particleCountBase = isMobile ? 20 : 40; flashCount = isMobile ? 4 : 10; }
+            else if (e.target.value === 'Medium') { particleCountBase = isMobile ? 30 : 60; flashCount = isMobile ? 6 : 15; }
+            else { particleCountBase = isMobile ? 35 : 80; flashCount = isMobile ? 8 : 20; }
+        });
+
+        document.getElementById('auto-fire').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                autoFireInterval = setInterval(() => fireworks.push(new Firework()), autoInterval);
+            } else {
+                clearInterval(autoFireInterval);
+            }
+        });
+
+        document.getElementById('hide-controls').addEventListener('change', (e) => {
+            document.getElementById('top-controls').style.display = e.target.checked ? 'none' : 'flex';
+        });
+
+        document.getElementById('fullscreen').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                if (canvas.requestFullscreen) canvas.requestFullscreen();
+                else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen();
+            }
         });
     </script>
 </body>

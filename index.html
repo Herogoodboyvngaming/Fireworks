@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fireworks</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+        #top-controls {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 40px;
+            color: white;
+            font-size: 32px;
+        }
+        .top-btn {
+            cursor: pointer;
+            padding: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
+        }
+        .muted { opacity: 0.4; }
+        #unlock-hint {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 20px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 10px;
+            z-index: 90;
+            display: none;
+        }
+        /* Settings panel giữ nguyên */
+        /* ... (giữ phần CSS settings như trước) ... */
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div id="top-controls">
+        <div id="sound-btn" class="top-btn">🔊</div>
+        <div id="settings-btn" class="top-btn">⚙️</div>
+    </div>
+
+    <div id="unlock-hint">Tap màn hình để bật âm thanh nổ!</div>
+
+    <!-- Settings panel giữ nguyên như code trước -->
+
+    <script>
+        // ... (giữ phần canvas, pháo hoa, trail dài đẹp như code trước) ...
+
+        let soundEnabled = true;
+        let hasInteracted = false;
+
+        // Preload sound mạnh hơn
+        const explosionUrls = [
+            'https://assets.mixkit.co/sfx/preview/mixkit-large-firework-explosion-1670.mp3',
+            'https://assets.mixkit.co/sfx/preview/mixkit-firework-explosion-1669.mp3',
+            'https://assets.mixkit.co/sfx/preview/mixkit-single-firework-explosion-1675.mp3'
+        ];
+        const explosionAudios = explosionUrls.map(url => {
+            const a = new Audio(url);
+            a.preload = 'auto';
+            return a;
+        });
+
+        // Thêm sound ngắn im lặng để force unlock (trick hay)
+        const silentSound = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+
+        function forceUnlock() {
+            silentSound.play().catch(() => {});
+            explosionAudios.forEach(a => {
+                a.play().catch(() => {});
+            });
+        }
+
+        function playExplosion() {
+            if (!soundEnabled || !hasInteracted) return;
+            const a = explosionAudios[Math.floor(Math.random() * explosionAudios.length)].cloneNode();
+            a.volume = 1.0;
+            a.play().catch(() => {});
+        }
+
+        // Hiển thị hint lần đầu
+        document.getElementById('unlock-hint').style.display = 'block';
+
+        function unlockSound(e) {
+            if (!hasInteracted) {
+                hasInteracted = true;
+                document.getElementById('unlock-hint').style.display = 'none';
+                forceUnlock(); // Force unlock mạnh
+            }
+        }
+
+        canvas.addEventListener('click', (e) => { unlockSound(); fireworks.push(new Firework(e.clientX, e.clientY / 2)); });
+        canvas.addEventListener('touchstart', (e) => { unlockSound(); e.preventDefault(); const t = e.touches[0]; fireworks.push(new Firework(t.clientX, t.clientY / 2)); });
+
+        // ... (giữ phần còn lại như sound toggle, settings, animate...) ...
+    </script>
+</body>
+</html>

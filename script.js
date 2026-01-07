@@ -1523,7 +1523,21 @@ function createParticleArc(start, arcLength, count, randomness, particleFactory)
 }
 
 
-// Helper used to create a spherical burst of particles
+/**
+ * Helper used to create a spherical burst of particles.
+ *
+ * @param  {Number} count               The desired number of stars/particles. This value is a suggestion, and the
+ *                                      created burst may have more particles. The current algorithm can't perfectly
+ *                                      distribute a specific number of points evenly on a sphere's surface.
+ * @param  {Function} particleFactory   Called once per star/particle generated. Passed two arguments:
+ *                                        `angle`: The direction of the star/particle.
+ *                                        `speed`: A multipler for the particle speed, from 0.0 to 1.0.
+ * @param  {Number} startAngle=0        For segmented bursts, you can generate only a partial arc of particles. This
+ *                                      allows setting the starting arc angle (radians).
+ * @param  {Number} arcLength=TAU       The length of the arc (radians). Defaults to a full circle.
+ *
+ * @return {void}              Returns nothing; it's up to `particleFactory` to use the given data.
+ */
 function createBurst(count, particleFactory, startAngle=0, arcLength=PI_2) {
 	// Assuming sphere with surface area of `count`, calculate various
 	// properties of said sphere (unit is stars).
@@ -1594,7 +1608,7 @@ function floralEffect(star) {
 	// Queue burst flash render
 	BurstFlash.add(star.x, star.y, 46);
 	soundManager.playSound('burstSmall');
-} 
+}
 
 // Floral burst with willow stars
 function fallingLeavesEffect(star) {
@@ -2291,10 +2305,4 @@ if (IS_HEADER) {
 			}
 		);
 	}, 0);
-}	};
-};
-
-
-const palmShell = (size=1) => {
-	const color = randomColor();
-	const thick = Mat
+}
